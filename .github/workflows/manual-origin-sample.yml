@@ -1,0 +1,126 @@
+name: Manual WAP Origin Sample
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Public historical WAP candidate (one site per run)
+        type: choice
+        required: true
+        default: tx.com.cn
+        options:
+          - tx.com.cn
+          - qq.ip138.com
+          - wap.yuyangzhou.name
+          - wap.ee1234.com
+          - wap.517ming.com
+          - wap.shufaji.com
+          - wap.uc123.com
+          - www.cctv.com
+      scheme:
+        description: HTTP and HTTPS must be tested separately
+        type: choice
+        required: true
+        default: http
+        options:
+          - http
+          - https
+      profile:
+        description: Fixed Nokia 7110 or Symbian E63 request headers
+        type: choice
+        required: true
+        default: wap1
+        options:
+          - wap1
+          - s60
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wap-origin-one-at-a-time
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: One direct-origin sample (max two GET requests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: src
+      SITE_NAME: ${{ inputs.site }}
+      SITE_SCHEME: ${{ inputs.scheme }}
+      DEVICE_PROFILE: ${{ inputs.profile }}
+    steps:
+      - name: Checkout frozen research source
+        uses: actions/checkout@v5
+      - name: Use Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify and unpack frozen R5 baseline
+        run: |
+          python - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import hashlib
+          import zipfile
+          source = Path('vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip')
+          want = 'cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa'
+          if hashlib.sha256(source.read_bytes()).hexdigest() != want:
+              raise SystemExit('R5 frozen source integrity check failed')
+          with zipfile.ZipFile(source) as archive:
+              for member in archive.infolist():
+                  path = PurePosixPath(member.filename)
+                  if path.is_absolute() or '..' in path.parts or '\\' in member.filename:
+                      raise SystemExit('Unsafe R5 archive entry')
+              archive.extractall('.r5_unpacked')
+          PY
+      - name: Construct single allowlisted URL and record invocation
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          paths = {
+              'tx.com.cn': 'tx.com.cn/',
+              'qq.ip138.com': 'qq.ip138.com/train/search_train.wml',
+              'wap.yuyangzhou.name': 'wap.yuyangzhou.name/',
+              'wap.ee1234.com': 'wap.ee1234.com/',
+              'wap.517ming.com': 'wap.517ming.com/',
+              'wap.shufaji.com': 'wap.shufaji.com/',
+              'wap.uc123.com': 'wap.uc123.com/',
+              'www.cctv.com': 'www.cctv.com/wap/index.wml',
+          }
+          site = os.environ['SITE_NAME']
+          scheme = os.environ['SITE_SCHEME']
+          profile = os.environ['DEVICE_PROFILE']
+          if site not in paths or scheme not in ('http', 'https') or profile not in ('wap1', 's60'):
+              raise SystemExit('Non-allowlisted capture input')
+          url = scheme + '://' + paths[site]
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as out:
+              out.write('TARGET_URL=' + url + '\n')
+          root = Path('evidence')
+          root.mkdir(exist_ok=True)
+          (root / 'invocation.json').write_text(json.dumps({
+              'url': url, 'profile': profile,
+              'source_commit': os.environ['GITHUB_SHA'],
+              'workflow_run_id': os.environ['GITHUB_RUN_ID'],
+              'manual_only': True,
+              'expected_maximum_get_requests': 2,
+              'grade': 'PENDING',
+          }, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Capture first page and at most one reachable GET
+        run: |
+          python -m wap_probe.pipeline \
+            --url "$TARGET_URL" --profile "$DEVICE_PROFILE" \
+            --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
+            --out evidence/live --execute
+      - name: Preserve original response evidence (private artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: origin-sample-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 3
