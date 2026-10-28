@@ -1,79 +1,60 @@
 # WAP Probe
 
-WAP Probe 是用于传统 WAP 协议研究、WML/WMLC 解析、HTTP 证据校验、离线回放及互操作验证的 Python 工程。
+WAP Probe 是用于传统 WAP 协议研究、WML/WMLC 解析、HTTP 证据采集与验证、离线回放及互操作测试的 Python 工程。
 
-**当前状态：R6 离线证据模块初版。R5 原始解析器及历史 139 项回归测试尚未迁入本仓库。**
-历史 R5 测试数量仅为既有记录，不能视作本仓库的当前测试结果。
+**当前工程状态：冻结 R5 已入库，R6 离线证据层已接入真实 R5 解析器。** R5 源码及其原有测试保存在不可变 ZIP 归档中，由 GitHub Actions 验证 SHA-256 后解包运行；这不是在线站点的 A 级验收。
 
-## 已入库的 R6 模块
+## 工程结构
 
-- `wap_probe.evidence_gate`：离线校验 `metadata.json`、`headers.bin`、`body.bin` 的状态、SHA-256、内容长度、MIME 和公网 DNS/IP 一致性；不会授予 A 级。
-- `wap_probe.navigation`：从规范化的 R5 链接中挑选同源 GET 二级页面候选，不触发实际请求。
-- `wap_probe.bridge`：核验两页采集证据与规范化 R5 JSON 输出是否对应；**不会调用 R5 解析器，也不能证明 JSON 本身由真实 R5 执行生成**。
-- `tests/`：仅使用 Python 标准库的离线回归测试。
-- GitHub Actions：在 `push`、`pull_request` 或手动触发时运行语法编译与离线测试，不访问候选 WAP 网站。
+- `vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip`：冻结的原始 R5 工程，包含源码、WBXML/WMLC 测试样本和原有 139 项测试。
+- `src/wap_probe/evidence_gate.py`：离线校验 HTTP 响应头、正文、元数据、SHA-256、内容长度及 IP 一致性。
+- `src/wap_probe/r5_adapter.py`：读取已验收的 R6 证据，**实际调用冻结 R5 的 `inspect_markup()`**，生成 `r6-r5-export-v1`；过滤需要输入的 WML 导航链接。
+- `src/wap_probe/navigation.py`：挑选公开的同源 GET 二级页面候选，不自动发起网络请求。
+- `src/wap_probe/bridge.py`：把首页和二级页的证据与 R5 解析结果关联，输出可审计的状态，不会自动授予 A 级。
+- `tests/`：R6 单元测试、真实 R5 适配测试，以及离线两页集成测试。
+- `.github/workflows/tests.yml`：验证源 ZIP，运行当前 R6 和冻结 R5 测试。仅 main 推送和手动触发，不使用 PR 自动测试。
 
-## 运行离线测试
+## 运行测试
 
-Python 3.10+，无需安装外部测试依赖：
+Python 3.10+，离线执行，不需要公网连接。首先解包 R5（请先核对 SHA-256，详见 [R5 来源与迁移说明](docs/R5_SOURCE.md)）：
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+python3 -m zipfile -e vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip .r5_unpacked
+PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
+  python3 -m unittest discover -s tests -v
+
+for part in probe discovery integrations; do
+  (cd ".r5_unpacked/wap-probe-live-discovery-r5/$part" && \
+    python3 -m unittest discover -p 'test_*.py' -q)
+done
 ```
 
-检查一个已有的证据目录集合：
+当前 GitHub Actions 对提交执行了 **93 项 R6/适配/集成测试 + 139 项冻结 R5 测试，均通过**。这些测试使用预置或合成数据，不是在线网站检测。
+
+## 真实 R5 → R6 离线执行
+
+假设 `evidence/home` 中已经有符合 R6 数据规范的 `metadata.json`、`headers.bin` 和 `body.bin`：
 
 ```bash
-PYTHONPATH=src python3 -m wap_probe.evidence_gate evidence/
-```
+PYTHONPATH=src python3 -m wap_probe.r5_adapter \
+  --capture evidence/home \
+  --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
+  --out evidence/home/r5_export.json
 
-已获得一份实际的规范化 R5 输出后，可以生成下一步 GET 计划：
-
-```bash
-PYTHONPATH=src python3 -m wap_probe.bridge --home evidence/home \
+PYTHONPATH=src python3 -m wap_probe.bridge \
+  --home evidence/home \
   --home-r5 evidence/home/r5_export.json
 ```
 
-如果输出 `CHILD_GET_REQUIRED`，表示**应另行安全采集**，不是已访问或已验证第二页。
+出现 `CHILD_GET_REQUIRED` 只表示已找到可供人工或受控采集器验证的二级 GET 候选；**并不表示已发生请求**。
 
-## R5 输出适配约定（尚未真实接入）
+## 验收和安全边界
 
-```json
-{
-  "schema": "r6-r5-export-v1",
-  "status": "ok",
-  "strict": true,
-  "source_sha256": "<body.bin 的真实 64 位 SHA-256>",
-  "cards": [{
-    "id": "home",
-    "links": [{"href": "next.wml", "method": "GET"}]
-  }]
-}
-```
+- 仅对公开无登录目标进行安全的 GET 请求；HTTP 与 HTTPS 独立，禁止自动跟随重定向。
+- `WML_CAPTURED_NEEDS_R5` 表示证据通过字节级检查，但尚待实际解析；`TWO_PAGE_EVIDENCE_MATCHED` 表示两份离线证据/解析出口一致，**不自动授予 A-origin 或 A-navigation PASS**。
+- R5 XML/WBXML 解析成功并非完整 WML DTD 一致性或真实设备兼容性证明。
+- WAP Labs 网关输出属于单独的互操作证据，不能替代直连原站响应。
+- 目前 R6 导航桥接只使用首页第一张卡片上的链接；`#card` 可达性遍历与真实联网采集器仍待进一步实现。
+- CI 不主动访问任何真实 WAP 站点，不启动 Deep Research。
 
-这里是**约定格式**而非真实站点解析结果。下一阶段须把真实 R5 解析器的严格解析结果接入，并验证生成过程。当前桥接器只从第一张卡片读取链接，以避免误把未到达的隐藏卡片当作首页导航。
-
-## 验收边界
-
-- A-origin 要求：原站独立 HTTP 200 WML/WMLC 原始证据 + R5 严格解析至少一张有效卡片，且实际运行过程可复核。
-- A-navigation 要求：上述首页条件成立，且沿首页公开同源 GET 链接完成第二次独立采集与严格解析。
-- WAP Labs / 网关的 WSP、WDP 和 WBXML 结果属于独立互操作证据，**不能替代原站直连证据**。
-- 永不把 `WML_CAPTURED_NEEDS_R5`、`TWO_PAGE_EVIDENCE_MATCHED` 当作自动 A PASS。
-- 全程仅公开目标、只允许 GET、禁止登录和自动重定向。**当前仓库不包含任何自动外网采集 CI。**
-
-## 后续工作
-
-1. 核验本仓库的首次 GitHub Actions 回归结果，并修复实际失败。
-2. 迁入已验证的 R5 解析器及既有测试，再完成 R5→R6 实际调用适配。
-3. 在充分的 SSRF / DNS 绑定 / HTTP framing 测试后，另行实现受控、手动运行的 R6 采集器。
-4. 真实采集成功后再讨论 A-origin / A-navigation 验收与扩展。
-
-License 暂未确定，公开前再核对来源和授权。
-
-## R5 源码已入库（不可变归档）
-
-原始 R5 稳定 ZIP 存于 `vendor/r5/`，其 SHA-256 在 CI 中严格校验；自动解包后运行原有 139 项测试及新增真实 R5→R6 适配测试。参见 [R5 迁移说明](docs/R5_SOURCE.md)。
-
-**注意：** 这只验证离线代码和模拟 HTTP 证据，不等于发现在线 A-origin / A-navigation，也不构成真实设备或 WAP Gateway 验证。
-
-GitHub Actions 只在 main push 或手动触发时运行，日常开发不创建 PR、不启用 PR 自动测试。
+许可证尚未确定，在审核项目来源与再分发条件前不改为公开仓库。
