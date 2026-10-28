@@ -15,6 +15,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,6 +111,48 @@ def public_dns(host: str, *, resolver=socket.getaddrinfo) -> list[str]:
     return values
 
 
+def anonymous_jsessionid(raw_headers: bytes) -> str:
+    """Extract one host-only anonymous JSESSIONID from the home response.
+
+    Strictly limited to a 32-hex session ID. No other cookie is consumed.
+    """
+    if not isinstance(raw_headers, bytes) or len(raw_headers) > 65536:
+        raise ValueError("Invalid home response headers")
+    candidates = []
+    for line in raw_headers.splitlines():
+        if not line.lower().startswith(b"set-cookie:"):
+            continue
+        fields = line.split(b":", 1)[1].strip().split(b";")
+        name, sep, value = fields[0].strip().partition(b"=")
+        if name.strip().lower() != b"jsessionid":
+            continue
+        if not sep or not re.fullmatch(rb"[A-Fa-f0-9]{32}", value):
+            raise ValueError("Malformed anonymous JSESSIONID")
+        attributes = {
+            item.strip().partition(b"=")[0].lower() for item in fields[1:]
+        }
+        if b"domain" in attributes:
+            raise ValueError("JSESSIONID must be host-only")
+        candidates.append(value.decode("ascii"))
+    if len(candidates) != 1:
+        raise ValueError("Missing or ambiguous anonymous JSESSIONID")
+    return candidates[0]
+
+
+def _secure_cookie_file(folder: Path, session: str) -> Path:
+    if not re.fullmatch(r"[A-Fa-f0-9]{32}", session):
+        raise ValueError("Invalid anonymous session token")
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="ascii", prefix=".anon_session_",
+        suffix=".cookie", dir=folder, delete=False
+    ) as handle:
+        handle.write("# Netscape HTTP Cookie File\n")
+        handle.write(
+            "tx.com.cn\tFALSE\t/\tTRUE\t0\tJSESSIONID\t" + session + "\n"
+        )
+        return Path(handle.name)
+
+
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -119,7 +162,7 @@ def utc() -> str:
 
 
 def build_command(url: str, hostname: str, port: int, ip: str,
-                  profile: str, folder: Path) -> list[str]:
+                  profile: str, folder: Path, *, cookie_file=None) -> list[str]:
     if profile not in PROFILES:
         raise ValueError("Unknown device profile")
     pinned = f"[{ip}]" if ":" in ip else ip
@@ -135,6 +178,8 @@ def build_command(url: str, hostname: str, port: int, ip: str,
         "--output", str(folder / "body.bin"),
         "--write-out", "%{http_code}\\n%{url_effective}\\n%{remote_ip}\\n%{content_type}\\n",
     ]
+    if cookie_file is not None:
+        command += ["--cookie", str(cookie_file)]
     for key, value in PROFILES[profile].items():
         command += ["--header", f"{key}: {value}"]
     for line in COMMON_HEADERS:
@@ -144,7 +189,8 @@ def build_command(url: str, hostname: str, port: int, ip: str,
 
 
 def capture(url: str, profile: str, folder: Path, *,
-            resolver=socket.getaddrinfo, runner=subprocess.run) -> dict:
+            resolver=socket.getaddrinfo, runner=subprocess.run,
+            session_cookie=None) -> dict:
     """Create a self-contained evidence folder, even on network failure.
 
     Subprocess and resolver can be injected for fully offline regression tests.
@@ -152,6 +198,13 @@ def capture(url: str, profile: str, folder: Path, *,
     if profile not in PROFILES:
         raise ValueError("Unknown device profile")
     scheme, host, port = validate_url(url)
+    if session_cookie is not None:
+        if scheme != "https" or host != "tx.com.cn":
+            raise ValueError("Anonymous session replay requires HTTPS tx.com.cn")
+        if not isinstance(session_cookie, str) or not re.fullmatch(
+            r"[a-fA-F0-9]{32}", session_cookie
+        ):
+            raise ValueError("Invalid anonymous session")
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=False)
     header_path, body_path = folder / "headers.bin", folder / "body.bin"
@@ -168,7 +221,9 @@ def capture(url: str, profile: str, folder: Path, *,
         "body_sha256": sha256(b""), "headers_sha256": sha256(b""),
         "classification": "NOT_STARTED",
         "A_origin": "PENDING", "A_navigation": "PENDING",
+        "anonymous_cookie_sent": ["JSESSIONID"] if session_cookie else [],
     }
+    cookie_file = None
     try:
         answers = public_dns(host, resolver=resolver)
         pinned = answers[0]
@@ -176,7 +231,11 @@ def capture(url: str, profile: str, folder: Path, *,
         metadata["pinned_ip"] = pinned
         if shutil.which("curl") is None and runner is subprocess.run:
             raise RuntimeError("curl executable not installed")
-        command = build_command(url, host, port, pinned, profile, folder)
+        if session_cookie is not None:
+            cookie_file = _secure_cookie_file(folder, session_cookie)
+        command = build_command(
+            url, host, port, pinned, profile, folder, cookie_file=cookie_file
+        )
         completed = runner(command, capture_output=True, check=False, timeout=25)
         metadata["curl_exit_code"] = int(completed.returncode)
         (folder / "stderr.txt").write_bytes(completed.stderr[:16_384])
@@ -206,6 +265,8 @@ def capture(url: str, profile: str, folder: Path, *,
         )
         metadata["classification"] = "DNS_OR_SAFETY_OR_TOOL_ERROR"
     finally:
+        if cookie_file is not None:
+            cookie_file.unlink(missing_ok=True)
         body = body_path.read_bytes()
         headers = header_path.read_bytes()
         metadata["body_bytes"] = len(body)

@@ -7,8 +7,9 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from urllib.parse import urlsplit
 from pathlib import Path
-from wap_probe.collector import capture, matrix, validate_url, PROFILES
+from wap_probe.collector import capture, matrix, validate_url, PROFILES, anonymous_jsessionid
 from wap_probe.bridge import evaluate
 from wap_probe.r5_adapter import parse_capture
 
@@ -31,11 +32,17 @@ def _export(capture_dir: Path, probe_dir: Path) -> Path:
 
 
 def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
-            capture_fn=capture, before_second_get=None, preferred_path=None) -> dict:
+            capture_fn=capture, before_second_get=None, preferred_path=None,
+            anonymous_session=False) -> dict:
     """Opt-in caller supplies capture_fn; never directly opens a socket here."""
     validate_url(url)
     if profile not in PROFILES:
         raise ValueError("Invalid profile")
+    if anonymous_session and (
+        url != "https://tx.com.cn/"
+        or preferred_path != "/zone/cs/category.do"
+    ):
+        raise ValueError("Anonymous experiment restricted to HTTPS tx.com.cn categories")
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=False)
     report = {
@@ -43,6 +50,9 @@ def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
         "A_origin": "PENDING", "A_navigation": "PENDING",
         "home_capture": None, "child_capture": None,
         "preferred_path": preferred_path,
+        "anonymous_session_mode": (
+            "jsessionid_https_only" if anonymous_session else "none"
+        ),
     }
     home = folder / "home"
     try:
@@ -65,10 +75,21 @@ def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
                 or next_request.get("follow_redirects") is not False):
             raise ValueError("Unsafe navigation task")
         validate_url(next_url)
+        if anonymous_session:
+            target = urlsplit(next_url)
+            if (target.scheme != "https" or target.hostname != "tx.com.cn"
+                    or target.path != "/zone/cs/category.do"):
+                raise ValueError("Unsafe anonymous session destination")
         if before_second_get is not None:
             before_second_get()
         child = folder / "child"
-        child_meta = capture_fn(next_url, profile, child)
+        if anonymous_session:
+            token = anonymous_jsessionid((home / "headers.bin").read_bytes())
+            child_meta = capture_fn(
+                next_url, profile, child, session_cookie=token
+            )
+        else:
+            child_meta = capture_fn(next_url, profile, child)
         report["child_capture"] = child_meta["classification"]
         if child_meta["classification"] not in WML_STATUSES:
             report["stage"] = "CHILD_NOT_WML_EVIDENCE"
@@ -93,6 +114,8 @@ def main(argv=None):
     p.add_argument("--out", type=Path, default=Path("evidence/live"))
     p.add_argument("--execute", action="store_true", help="Explicitly perform network GET")
     p.add_argument("--prefer-path", help="Match a safe public GET using its real R5 URL path")
+    p.add_argument("--anonymous-jsessionid", action="store_true",
+                   help="Explicit test of fresh anonymous HTTPS session continuity")
     p.add_argument("--limit", type=int, default=32)
     p.add_argument("--delay", type=float, default=2.0)
     a = p.parse_args(argv)
@@ -106,6 +129,11 @@ def main(argv=None):
             p.error(str(exc))
         if a.matrix:
             p.error("--prefer-path requires exactly one --url target")
+    if a.anonymous_jsessionid and (
+        a.matrix or a.url != "https://tx.com.cn/"
+        or a.prefer_path != "/zone/cs/category.do"
+    ):
+        p.error("Anonymous session experiment requires HTTPS tx.com.cn categories")
     jobs = matrix() if a.matrix else [(a.url, a.profile)]
     jobs = jobs[:a.limit]
     for u, _ in jobs:
@@ -137,7 +165,8 @@ def main(argv=None):
     for idx, (url, profile) in enumerate(jobs, 1):
         report = run_job(url, profile, a.out / f"{idx:03d}_{profile}",
                          a.r5_dir, capture_fn=paced_capture,
-                         preferred_path=a.prefer_path)
+                         preferred_path=a.prefer_path,
+                         anonymous_session=a.anonymous_jsessionid)
         results.append({"url": url, "profile": profile, "stage": report["stage"]})
         print(f"{idx}/{len(jobs)} {profile} {url} -> {report['stage']}")
     (a.out / "summary.json").write_text(

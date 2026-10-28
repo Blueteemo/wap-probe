@@ -77,6 +77,71 @@ class CollectorTests(unittest.TestCase):
             self.assertEqual(m["pinned_ip"],m["remote_ip"])
             self.assertEqual(m["A_navigation"],"PENDING")
 
+
+    def test_anonymous_cookie_requires_exact_single_host_only_token(self):
+        value = b"0123456789abcdef0123456789ABCDEF"
+        accepted = (b"HTTP/1.1 200 OK\r\n"
+                    b"Set-Cookie: JSESSIONID=" + value
+                    + b"; Path=/; HttpOnly\r\n\r\n")
+        self.assertEqual(collector.anonymous_jsessionid(accepted),
+                         value.decode("ascii"))
+        bad = [
+            b"HTTP/1.1 200 OK\r\n\r\n",
+            accepted.replace(b"Path=/", b"Domain=.tx.com.cn; Path=/"),
+            accepted.replace(value, b"a\r\nInjected: true"),
+            accepted.replace(value, b"bad"),
+            accepted.replace(b"\r\n\r\n", b"\r\nSet-Cookie: JSESSIONID=" +
+                             value + b"; Path=/\r\n\r\n"),
+        ]
+        for raw in bad:
+            with self.subTest(raw=raw[:45]), self.assertRaises(ValueError):
+                collector.anonymous_jsessionid(raw)
+
+    def test_anonymous_cookie_replay_https_and_no_persisted_secret(self):
+        session = "0123456789abcdef0123456789ABCDEF"
+        with tempfile.TemporaryDirectory() as root:
+            folder = Path(root) / "sample"
+            def runner(command, **kwargs):
+                self.assertEqual(command[command.index("--request")+1], "GET")
+                self.assertNotIn("--location", command)
+                self.assertIn("--cookie", command)
+                cookie_path = Path(command[command.index("--cookie")+1])
+                self.assertEqual(cookie_path.stat().st_mode & 0o777, 0o600)
+                data = cookie_path.read_text(encoding="ascii")
+                self.assertIn("tx.com.cn\tFALSE\t/\tTRUE\t0\tJSESSIONID\t" + session, data)
+                self.assertNotIn(session, " ".join(
+                    part for part in command if part != str(cookie_path)
+                ))
+                headers = b"HTTP/1.1 302 Found\r\nLocation: http://tx.com.cn/in/guest.do\r\nContent-Length: 0\r\n\r\n"
+                Path(command[command.index("--dump-header")+1]).write_bytes(headers)
+                Path(command[command.index("--output")+1]).write_bytes(b"")
+                return subprocess.CompletedProcess(command, 0, stdout=(
+                    b"302\nhttps://tx.com.cn/zone/cs/category.do\n8.8.8.8\n\n"
+                ), stderr=b"")
+            result = collector.capture(
+                "https://tx.com.cn/zone/cs/category.do", "wap1",
+                folder, resolver=DNS, runner=runner, session_cookie=session)
+            self.assertEqual(result["classification"], "REDIRECT")
+            self.assertEqual(result["anonymous_cookie_sent"], ["JSESSIONID"])
+            self.assertEqual(list(folder.glob(".anon_session_*")), [])
+            self.assertNotIn(session,
+                (folder / "metadata.json").read_text(encoding="utf-8"))
+            self.assertNotIn(session,
+                (folder / "curl_writeout.txt").read_text(encoding="utf-8"))
+            self.assertEqual(result["A_navigation"], "PENDING")
+
+    def test_anonymous_cookie_rejected_on_http_and_other_host(self):
+        session = "0123456789abcdef0123456789ABCDEF"
+        with tempfile.TemporaryDirectory() as root:
+            for idx, url in enumerate((
+                "http://tx.com.cn/zone/cs/category.do",
+                "https://example.org/category.do",
+            )):
+                with self.subTest(url=url), self.assertRaises(ValueError):
+                    collector.capture(url, "wap1", Path(root) / str(idx),
+                                      resolver=DNS, session_cookie=session)
+            self.assertEqual(list(Path(root).iterdir()), [])
+
     def test_no_network_without_execute(self):
         with mock.patch("wap_probe.collector.capture") as capture:
             result=collector.main(["--url",HOME])

@@ -43,6 +43,14 @@ on:
           - tx_categories
           - tx_services
           - tx_novels
+      anonymous_session:
+        description: Explicit anonymous HTTPS JSESSIONID continuity experiment
+        type: choice
+        required: true
+        default: none
+        options:
+          - none
+          - jsessionid_https_only
 
 permissions:
   contents: read
@@ -62,6 +70,7 @@ jobs:
       SITE_SCHEME: ${{ inputs.scheme }}
       DEVICE_PROFILE: ${{ inputs.profile }}
       PUBLIC_SECTION: ${{ inputs.public_section }}
+      ANONYMOUS_SESSION_MODE: ${{ inputs.anonymous_session }}
     steps:
       - name: Checkout frozen research source
         uses: actions/checkout@v5
@@ -106,6 +115,13 @@ jobs:
           scheme = os.environ['SITE_SCHEME']
           profile = os.environ['DEVICE_PROFILE']
           section = os.environ['PUBLIC_SECTION']
+          session_mode = os.environ['ANONYMOUS_SESSION_MODE']
+          if session_mode not in ('none', 'jsessionid_https_only'):
+              raise SystemExit('Unknown anonymous session mode')
+          if session_mode == 'jsessionid_https_only' and not (
+              site == 'tx.com.cn' and scheme == 'https' and section == 'tx_categories'
+          ):
+              raise SystemExit('Anonymous experiment restricted to HTTPS tx.com.cn categories')
           approved_paths = {
               'auto': '',
               'tx_categories': '/zone/cs/category.do',
@@ -126,6 +142,7 @@ jobs:
           (root / 'invocation.json').write_text(json.dumps({
               'url': url, 'profile': profile,
               'public_section': section, 'preferred_path': preferred_path,
+              'anonymous_session_mode': session_mode,
               'source_commit': os.environ['GITHUB_SHA'],
               'workflow_run_id': os.environ['GITHUB_RUN_ID'],
               'manual_only': True,
@@ -138,6 +155,9 @@ jobs:
           extra=()
           if [[ -n "$PREFERRED_PATH" ]]; then
             extra+=(--prefer-path "$PREFERRED_PATH")
+          fi
+          if [[ "$ANONYMOUS_SESSION_MODE" == "jsessionid_https_only" ]]; then
+            extra+=(--anonymous-jsessionid)
           fi
           python -m wap_probe.pipeline \
             --url "$TARGET_URL" --profile "$DEVICE_PROFILE" \

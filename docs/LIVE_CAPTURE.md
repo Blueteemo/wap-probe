@@ -44,3 +44,41 @@ Local equivalent (only where direct public network access is permitted):
       --out evidence/tx-category-001 --execute
 
 An Actions run completing successfully is not an A-navigation PASS.
+
+## Anonymous JSESSIONID continuity: controlled two-GET experiment
+
+Evidence in three real HTTPS captures from 2026-10-28 shows that the home
+WML page contains stable channel z values 900000010 through 900000019, while
+each home response sets a new JSESSIONID. Independent anonymous requests to
+/love/index.do and /zone/cs/category.do returned HTTP 302 pointing to
+http://tx.com.cn/in/guest.do?returl=..., without a Cookie header.
+
+The optional manual workflow input anonymous_session=jsessionid_https_only
+is restricted to tx.com.cn, HTTPS, the tx_categories link, and the Nokia
+profile selected for the comparison. The default is none.
+
+The experiment first GETs the fresh WML homepage without cookies, validates
+the WML through R5, then extracts exactly one 32-hex, host-only JSESSIONID.
+The second GET is the actual homepage-linked /zone/cs/category.do URL with
+its freshly parsed query. Only the new anonymous JSESSIONID is replayed to
+the same HTTPS tx.com.cn host. No browser, authentication, cfrom, csstype,
+access or txEncodeUid cookies are imported. No redirects are followed and
+no HTTP downgrade or /in/guest.do is visited.
+
+The cookie is written to a temporary 0600 Netscape-format curl cookie file
+and removed after the request. Session values are never written to run
+reports or curl command arguments, but the private raw headers can include
+Set-Cookie; treat all raw evidence as sensitive. The artifact expires in 3
+days. No more than two independent GET requests can be issued per run.
+
+Use the manual workflow with site=tx.com.cn, scheme=https, profile=wap1,
+public_section=tx_categories, anonymous_session=jsessionid_https_only.
+The no-cookie baseline was run #40693454540. This is not a simultaneous
+A/B experiment: if the new second-page request returns 302 again, it only
+indicates that JSESSIONID alone was not sufficient on this attempt.
+
+Equivalent explicit local invocation:
+
+    PYTHONPATH=src python3 -m wap_probe.pipeline --url https://tx.com.cn/ \
+      --profile wap1 --prefer-path /zone/cs/category.do \
+      --anonymous-jsessionid --out evidence/tx-category-cookie01 --execute
