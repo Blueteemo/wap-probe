@@ -115,3 +115,73 @@ def select_navigation(
             }
         skipped.append({"index": index, "reason": reason})
     return {**output, "status": "NO_SAFE_SECOND_PAGE", "skipped": skipped}
+
+
+def select_reachable_navigation(
+    home_url, cards, *, capture_status, card_count,
+    captured_body_sha256, parsed_body_sha256,
+):
+    """BFS across explicit #card links, then select one safe external GET.
+
+    This only creates a request plan. A fragment traversal is not a new HTTP
+    response and cannot count as A-navigation by itself.
+    """
+    from collections import deque
+    base = select_navigation(
+        home_url, [],
+        capture_status=capture_status,
+        card_count=card_count,
+        captured_body_sha256=captured_body_sha256,
+        parsed_body_sha256=parsed_body_sha256,
+    )
+    if base["status"] != "NO_SAFE_SECOND_PAGE":
+        return base
+    if not isinstance(cards, list) or not cards or len(cards) > 256:
+        return {**base, "status": "INVALID_CARDS"}
+    index = {}
+    for i, card in enumerate(cards):
+        if not isinstance(card, dict) or not isinstance(card.get("links", []), list):
+            return {**base, "status": "INVALID_CARDS"}
+        identifier = card.get("id")
+        if identifier is not None and not isinstance(identifier, str):
+            return {**base, "status": "INVALID_CARDS"}
+        if identifier:
+            if identifier in index:
+                return {**base, "status": "DUPLICATE_CARD_ID"}
+            index[identifier] = i
+    queue = deque([(0, [])])
+    seen = {0}
+    skipped = []
+    while queue:
+        card_index, path = queue.popleft()
+        card = cards[card_index]
+        for link_index, link in enumerate(card.get("links", [])[:32]):
+            target, reason = evaluate_link(home_url, link)
+            if target is not None:
+                return {
+                    "status": "READY_FOR_GET",
+                    "A_navigation": "PENDING",
+                    "target_url": target,
+                    "method": "GET",
+                    "source_card_index": card_index,
+                    "source_card_id": card.get("id"),
+                    "source_link_index": link_index,
+                    "fragment_path": path,
+                    "skipped": skipped[:64],
+                }
+            # A card-local fragment may make a different card visible.
+            # Only a *literal* #id, with a valid GET, may advance BFS.
+            href = link.get("href") if isinstance(link, dict) else None
+            if (
+                reason == "SAME_RESOURCE" and isinstance(href, str)
+                and href.startswith("#")
+                and re.fullmatch(r"#[A-Za-z_][A-Za-z0-9_.:-]{0,127}", href)
+            ):
+                child_index = index.get(href[1:])
+                if child_index is not None and child_index not in seen:
+                    seen.add(child_index)
+                    queue.append((child_index, path + [href[1:]]))
+            if len(skipped) < 64:
+                skipped.append({"card_index": card_index,
+                                "link_index": link_index, "reason": reason})
+    return {**base, "skipped": skipped}

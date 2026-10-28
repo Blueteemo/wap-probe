@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from wap_probe.evidence_gate import verify_folder
-from wap_probe.navigation import WML_STATUSES, select_navigation
+from wap_probe.navigation import WML_STATUSES, select_reachable_navigation
 
 EXPORT_SCHEMA = "r6-r5-export-v1"
 
@@ -40,21 +40,26 @@ def read_r5_export(export_path, capture_dir):
     for card in cards:
         if not isinstance(card, dict):
             raise ValueError("Invalid card")
-    # Only use visible/initial card's links; other cards may not be reachable.
-    raw_links = cards[0].get("links", [])
-    if not isinstance(raw_links, list) or len(raw_links) > 1024:
-        raise ValueError("Invalid link collection")
-    links = []
-    for item in raw_links:
-        if not isinstance(item, dict):
-            raise ValueError("Invalid link")
-        if not isinstance(item.get("href"), str):
-            raise ValueError("Invalid href")
-        method = item.get("method", "GET")
-        if not isinstance(method, str):
-            raise ValueError("Invalid method")
-        links.append({"href": item["href"], "method": method})
-    return {"source_sha256": actual_sha, "card_count": len(cards), "links": links}
+    validated_cards = []
+    total_links = 0
+    for card in cards:
+        raw_links = card.get("links", [])
+        if not isinstance(raw_links, list):
+            raise ValueError("Invalid card link collection")
+        parsed_links = []
+        for item in raw_links:
+            if not isinstance(item, dict) or not isinstance(item.get("href"), str):
+                raise ValueError("Invalid link")
+            method = item.get("method", "GET")
+            if not isinstance(method, str):
+                raise ValueError("Invalid method")
+            parsed_links.append({"href": item["href"], "method": method})
+            total_links += 1
+            if total_links > 1024:
+                raise ValueError("Too many links")
+        validated_cards.append({"id": card.get("id"), "links": parsed_links})
+    return {"source_sha256": actual_sha, "card_count": len(cards),
+            "cards": validated_cards, "links": validated_cards[0]["links"]}
 
 
 def report_stage(stage, **fields):
@@ -76,9 +81,9 @@ def evaluate(home_dir, home_r5_path=None, child_dir=None, child_r5_path=None):
         profile = home_meta["profile"]
         if not isinstance(profile, str) or not 1 <= len(profile) <= 64:
             raise ValueError("Invalid profile")
-        navigation = select_navigation(
+        navigation = select_reachable_navigation(
             home_meta["url"],
-            home_r5["links"],
+            home_r5["cards"],
             capture_status=home_evidence["status"],
             card_count=home_r5["card_count"],
             captured_body_sha256=home_meta["body_sha256"],
@@ -103,6 +108,9 @@ def evaluate(home_dir, home_r5_path=None, child_dir=None, child_r5_path=None):
         "url": target, "profile": profile,
         "method": "GET", "follow_redirects": False,
         "source_link_index": navigation["source_link_index"],
+        "source_card_index": navigation.get("source_card_index", 0),
+        "source_card_id": navigation.get("source_card_id"),
+        "fragment_path": navigation.get("fragment_path", []),
     }
     if child_dir is None:
         report["stage"] = "CHILD_GET_REQUIRED"

@@ -54,7 +54,24 @@ PYTHONPATH=src python3 -m wap_probe.bridge \
 - `WML_CAPTURED_NEEDS_R5` 表示证据通过字节级检查，但尚待实际解析；`TWO_PAGE_EVIDENCE_MATCHED` 表示两份离线证据/解析出口一致，**不自动授予 A-origin 或 A-navigation PASS**。
 - R5 XML/WBXML 解析成功并非完整 WML DTD 一致性或真实设备兼容性证明。
 - WAP Labs 网关输出属于单独的互操作证据，不能替代直连原站响应。
-- 目前 R6 导航桥接只使用首页第一张卡片上的链接；`#card` 可达性遍历与真实联网采集器仍待进一步实现。
+- 目前 R6 导航桥接只使用首页第一张卡片上的链接；`#card` 有界可达性遍历与显式启用的真实 HTTP 采集器均已添加。
 - CI 不主动访问任何真实 WAP 站点，不启动 Deep Research。
 
 许可证尚未确定，在审核项目来源与再分发条件前不改为公开仓库。
+
+## R6 原站验证（须显式授权联网）
+
+只预览 32 项 HTTP/HTTPS × 两类旧手机 UA 的候选采集矩阵：
+
+```sh
+PYTHONPATH=src python3 -m wap_probe.pipeline --matrix
+```
+
+在具备直连公网能力的环境中，单站点实际采集和 R5 两页验证：
+
+```sh
+PYTHONPATH=src python3 -m wap_probe.pipeline --url http://tx.com.cn/ \
+  --profile wap1 --out evidence/tx-wap1 --execute
+```
+
+`--execute` 为必选的联网开关；默认仅预览任务。参见 [R6 采集说明](docs/LIVE_CAPTURE.md)。CI 不自动扫描站点；所有 A 级结论仍为 PENDING，直到人工复核真实采集证据。
