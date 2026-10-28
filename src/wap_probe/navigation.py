@@ -16,6 +16,42 @@ SENSITIVE_KEYS = {
 }
 
 
+# Auth/account pages are not valid candidates for public second-page evidence.
+# This is a conservative path/query filter; no login/cookie flow is followed.
+AUTH_PATH_STEMS = {
+    "login", "logout", "logon", "signin", "signout", "signup",
+    "sign-in", "sign-out", "sign-up",
+    "register", "registration", "authenticate", "auth", "fltin_t",
+}
+AUTH_QUERY_ACTIONS = {
+    "login", "logout", "logon", "signin", "signout", "signup",
+    "sign-in", "sign-out", "sign-up",
+    "register", "registration", "authenticate", "password",
+}
+
+
+def _decoded_lower(text):
+    for _ in range(5):
+        changed = unquote(text)
+        if changed == text:
+            break
+        text = changed
+    return text.lower()
+
+
+def _auth_destination(path, query):
+    for segment in _decoded_lower(path).split("/"):
+        stem = segment.split(".", 1)[0]
+        if segment in AUTH_PATH_STEMS or stem in AUTH_PATH_STEMS:
+            return True
+    for key, value in parse_qsl(query, keep_blank_values=True, max_num_fields=64):
+        name = _decoded_lower(key)
+        intent = _decoded_lower(value)
+        if name in ("type", "action", "mode", "op", "operation", "step") and intent in AUTH_QUERY_ACTIONS:
+            return True
+    return False
+
+
 def origin(url):
     p = urlsplit(url)
     if p.scheme not in ("http", "https") or not p.hostname or p.fragment:
@@ -67,6 +103,8 @@ def evaluate_link(home_url, link):
         if origin(target) != base_origin:
             return None, "CROSS_ORIGIN"
         p = urlsplit(target)
+        if _auth_destination(p.path, p.query):
+            return None, "AUTH_FLOW"
         normalized = urlunsplit((p.scheme, p.hostname.lower(), p.path or "/", p.query, ""))
         home = urlsplit(urldefrag(home_url)[0])
         home_normalized = urlunsplit(

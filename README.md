@@ -75,3 +75,7 @@ PYTHONPATH=src python3 -m wap_probe.pipeline --url http://tx.com.cn/ \
 ```
 
 `--execute` 为必选的联网开关；默认仅预览任务。参见 [R6 采集说明](docs/LIVE_CAPTURE.md)。CI 不自动扫描站点；所有 A 级结论仍为 PENDING，直到人工复核真实采集证据。
+
+### 真实 HTTPS 样本的导航排除策略
+
+2026-10-28 首次 HTTPS 采集得到 `tx.com.cn` 首页 HTTP 200、WML 1.1、6,943 字节并由冻结 R5 解析出一张卡片。首页第一条 `/in/fltin_t.jsp?...type=login` 为登录/注册入口，返回 HTTP 302；它不是公开二级内容的有效验收样本。R6 现在排除明显的登录/注册 URL 路径和操作参数，优先尝试首页后续公开 GET 链接。这不保证后续链接一定返回 WML，二级响应仍需独立验证。访问行为仍限制为 GET、不发送登录表单、不跟随重定向。

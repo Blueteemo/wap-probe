@@ -105,6 +105,53 @@ class NavigationTests(unittest.TestCase):
             "NO_SAFE_SECOND_PAGE"
         )
 
+    def test_login_destination_from_real_tx_capture(self):
+        target, reason = evaluate_link(
+            "https://tx.com.cn/",
+            {"href": "/in/fltin_t.jsp?z=900000019&type=login", "method": "GET"},
+        )
+        self.assertIsNone(target)
+        self.assertEqual(reason, "AUTH_FLOW")
+
+    def test_login_redirect_destination_rejected(self):
+        target, reason = evaluate_link(
+            "https://tx.com.cn/",
+            {"href": "/in/login.do?kid=&type=passwdforward", "method": "GET"},
+        )
+        self.assertIsNone(target)
+        self.assertEqual(reason, "AUTH_FLOW")
+
+    def test_encoded_auth_path_rejected(self):
+        target, reason = evaluate_link(
+            HOME, {"href": "/account/%2573ignin?next=posts.wml"}
+        )
+        self.assertIsNone(target)
+        self.assertEqual(reason, "AUTH_FLOW")
+
+    def test_auth_query_action_rejected(self):
+        target, reason = evaluate_link(
+            HOME, {"href": "/entry.wml?action=sign-in"}
+        )
+        self.assertIsNone(target)
+        self.assertEqual(reason, "AUTH_FLOW")
+
+    def test_login_skipped_before_public_content(self):
+        result = choose([
+            {"href": "/in/fltin_t.jsp?type=login"},
+            {"href": "/love/index.do?z=900000018&from=txindex"}
+        ])
+        self.assertEqual(result["status"], "READY_FOR_GET")
+        self.assertEqual(result["source_link_index"], 1)
+        self.assertEqual(result["skipped"][0]["reason"], "AUTH_FLOW")
+
+    def test_public_content_not_overblocked(self):
+        target, reason = evaluate_link(
+            "https://tx.com.cn/",
+            {"href": "/love/index.do?z=900000018&from=txindex"}
+        )
+        self.assertEqual(reason, "OK")
+        self.assertEqual(target, "https://tx.com.cn/love/index.do?z=900000018&from=txindex")
+
     def test_query_only_navigation(self):
         self.assertEqual(choose([{"href": "?page=2"}])["status"],
                          "READY_FOR_GET")
