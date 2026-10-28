@@ -66,7 +66,8 @@ def report_stage(stage, **fields):
     return {"stage": stage, "A_origin": "PENDING", "A_navigation": "PENDING", **fields}
 
 
-def evaluate(home_dir, home_r5_path=None, child_dir=None, child_r5_path=None):
+def evaluate(home_dir, home_r5_path=None, child_dir=None, child_r5_path=None,
+             *, preferred_path=None):
     home_dir = Path(home_dir)
     home_evidence = verify_folder(home_dir)
     report = report_stage("HOME_CAPTURE_REJECTED", home_evidence=home_evidence)
@@ -88,6 +89,7 @@ def evaluate(home_dir, home_r5_path=None, child_dir=None, child_r5_path=None):
             card_count=home_r5["card_count"],
             captured_body_sha256=home_meta["body_sha256"],
             parsed_body_sha256=home_r5["source_sha256"],
+            preferred_path=preferred_path,
         )
         if navigation["status"] in ("HOME_NOT_VERIFIED", "INVALID_HOME_URL"):
             raise ValueError("Unsafe or unverified home")

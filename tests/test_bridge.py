@@ -89,6 +89,25 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(evaluate(self.home, self.home_r5)["stage"],
                          "HOME_R5_REJECTED")
 
+    def test_preferred_path_keeps_real_r5_link_query(self):
+        write_r5(self.home_r5, HOME_BODY, links=[
+            {"href": "other.wml", "method": "GET"},
+            {"href": "next.wml?z=123", "method": "GET"},
+        ])
+        report = evaluate(self.home, self.home_r5,
+                          preferred_path="/dir/next.wml")
+        self.assertEqual(report["stage"], "CHILD_GET_REQUIRED")
+        self.assertEqual(report["next_get"]["source_link_index"], 1)
+        self.assertEqual(report["next_get"]["url"], CHILD_URL + "?z=123")
+
+    def test_missing_preferred_path_never_requests_child(self):
+        report = evaluate(self.home, self.home_r5,
+                          preferred_path="/dir/unlisted.wml")
+        self.assertEqual(report["stage"], "HOME_R5_EVIDENCE_MATCHED")
+        self.assertEqual(report["navigation_selection"]["status"],
+                         "PREFERRED_LINK_NOT_FOUND")
+        self.assertNotIn("next_get", report)
+
     def test_child_binding_wrong_url(self):
         write_capture(self.child, "http://wap.example.org/wrong.wml", CHILD_BODY)
         self.assertEqual(

@@ -1,6 +1,7 @@
 import unittest
 
-from wap_probe.navigation import evaluate_link, select_navigation
+from wap_probe.navigation import (evaluate_link, select_navigation,
+    select_reachable_navigation, validate_preferred_path)
 
 HOME = "http://wap.example.org/dir/index.wml"
 SHA = "a" * 64
@@ -151,6 +152,63 @@ class NavigationTests(unittest.TestCase):
         )
         self.assertEqual(reason, "OK")
         self.assertEqual(target, "https://tx.com.cn/love/index.do?z=900000018&from=txindex")
+
+    def test_prefer_tx_category_from_real_home_links(self):
+        links = [
+            {"href": "/in/fltin_t.jsp?type=login"},
+            {"href": "/love/index.do?z=1&from=txindex"},
+            {"href": "/zone/cs/category.do?&z=900000014&from=txindex"},
+            {"href": "/editor/cs/official.do?&id=1232&from=txindex"},
+        ]
+        r = select_reachable_navigation(
+            "https://tx.com.cn/", [{"id": None, "links": links}],
+            capture_status="WML_CAPTURED_NEEDS_R5",
+            card_count=1, captured_body_sha256=SHA,
+            parsed_body_sha256=SHA, preferred_path="/zone/cs/category.do"
+        )
+        self.assertEqual(r["status"], "READY_FOR_GET")
+        self.assertEqual(r["source_link_index"], 2)
+        self.assertEqual(r["target_url"],
+            "https://tx.com.cn/zone/cs/category.do?&z=900000014&from=txindex")
+        self.assertEqual(r["skipped"][1]["reason"], "OTHER_PUBLIC_LINK")
+
+    def test_preferred_missing_cannot_fall_back_to_first_link(self):
+        r = select_reachable_navigation(
+            HOME, [{"id": "home", "links": [{"href": "other.wml"}]}],
+            capture_status="WML_CAPTURED_NEEDS_R5", card_count=1,
+            captured_body_sha256=SHA, parsed_body_sha256=SHA,
+            preferred_path="/dir/category.do")
+        self.assertEqual(r["status"], "PREFERRED_LINK_NOT_FOUND")
+        self.assertIsNone(r["target_url"])
+
+    def test_preferred_path_rejects_url_query_and_traversal(self):
+        for value in ("https://evil.example/", "//evil.example/", "/../admin",
+                      "/read/cs/category.do?token=abc", "/some%2fpath", ""):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    validate_preferred_path(value)
+
+    def test_preferred_only_matches_eligible_get_same_origin(self):
+        r = select_reachable_navigation(
+            HOME, [{"id": "home", "links": [
+                {"href": "https://wap.example.org/dir/category.do"},
+                {"href": "category.do", "method": "POST"}]}],
+            capture_status="WML_CAPTURED_NEEDS_R5", card_count=1,
+            captured_body_sha256=SHA, parsed_body_sha256=SHA,
+            preferred_path="/dir/category.do")
+        self.assertEqual(r["status"], "PREFERRED_LINK_NOT_FOUND")
+
+    def test_preferred_link_reachable_through_fragment(self):
+        cards = [{"id": "home", "links": [{"href": "#posts"}]},
+                 {"id": "posts", "links": [
+                     {"href": "other.wml"}, {"href": "category.do"}]}]
+        r = select_reachable_navigation(
+            HOME, cards, capture_status="WML_CAPTURED_NEEDS_R5",
+            card_count=2, captured_body_sha256=SHA,
+            parsed_body_sha256=SHA, preferred_path="/dir/category.do")
+        self.assertEqual(r["status"], "READY_FOR_GET")
+        self.assertEqual(r["fragment_path"], ["posts"])
+        self.assertEqual(r["source_link_index"], 1)
 
     def test_query_only_navigation(self):
         self.assertEqual(choose([{"href": "?page=2"}])["status"],

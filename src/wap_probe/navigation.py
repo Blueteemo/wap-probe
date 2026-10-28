@@ -52,6 +52,16 @@ def _auth_destination(path, query):
     return False
 
 
+
+def validate_preferred_path(path):
+    """Conservative literal path used ONLY to match a real parsed R5 link."""
+    if not isinstance(path, str) or not re.fullmatch(
+        r"/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*(?:\.[A-Za-z0-9]+)?", path
+    ):
+        raise ValueError("Preferred path must be a simple absolute URL path")
+    return path
+
+
 def origin(url):
     p = urlsplit(url)
     if p.scheme not in ("http", "https") or not p.hostname or p.fragment:
@@ -157,7 +167,7 @@ def select_navigation(
 
 def select_reachable_navigation(
     home_url, cards, *, capture_status, card_count,
-    captured_body_sha256, parsed_body_sha256,
+    captured_body_sha256, parsed_body_sha256, preferred_path=None,
 ):
     """BFS across explicit #card links, then select one safe external GET.
 
@@ -174,6 +184,11 @@ def select_reachable_navigation(
     )
     if base["status"] != "NO_SAFE_SECOND_PAGE":
         return base
+    if preferred_path is not None:
+        try:
+            validate_preferred_path(preferred_path)
+        except ValueError:
+            return {**base, "status": "INVALID_PREFERRED_PATH"}
     if not isinstance(cards, list) or not cards or len(cards) > 256:
         return {**base, "status": "INVALID_CARDS"}
     index = {}
@@ -195,6 +210,9 @@ def select_reachable_navigation(
         card = cards[card_index]
         for link_index, link in enumerate(card.get("links", [])[:32]):
             target, reason = evaluate_link(home_url, link)
+            if target is not None and preferred_path is not None:
+                if urlsplit(target).path != preferred_path:
+                    target, reason = None, "OTHER_PUBLIC_LINK"
             if target is not None:
                 return {
                     "status": "READY_FOR_GET",
@@ -222,4 +240,9 @@ def select_reachable_navigation(
             if len(skipped) < 64:
                 skipped.append({"card_index": card_index,
                                 "link_index": link_index, "reason": reason})
-    return {**base, "skipped": skipped}
+    return {
+        **base,
+        "status": "PREFERRED_LINK_NOT_FOUND" if preferred_path is not None
+                  else "NO_SAFE_SECOND_PAGE",
+        "skipped": skipped,
+    }

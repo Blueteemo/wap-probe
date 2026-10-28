@@ -21,7 +21,7 @@ on:
         description: HTTP and HTTPS must be tested separately
         type: choice
         required: true
-        default: http
+        default: https
         options:
           - http
           - https
@@ -33,6 +33,16 @@ on:
         options:
           - wap1
           - s60
+      public_section:
+        description: Choose a public tx.com.cn WML link, or auto
+        type: choice
+        required: true
+        default: auto
+        options:
+          - auto
+          - tx_categories
+          - tx_services
+          - tx_novels
 
 permissions:
   contents: read
@@ -51,6 +61,7 @@ jobs:
       SITE_NAME: ${{ inputs.site }}
       SITE_SCHEME: ${{ inputs.scheme }}
       DEVICE_PROFILE: ${{ inputs.profile }}
+      PUBLIC_SECTION: ${{ inputs.public_section }}
     steps:
       - name: Checkout frozen research source
         uses: actions/checkout@v5
@@ -94,15 +105,27 @@ jobs:
           site = os.environ['SITE_NAME']
           scheme = os.environ['SITE_SCHEME']
           profile = os.environ['DEVICE_PROFILE']
+          section = os.environ['PUBLIC_SECTION']
+          approved_paths = {
+              'auto': '',
+              'tx_categories': '/zone/cs/category.do',
+              'tx_services': '/editor/cs/official.do',
+              'tx_novels': '/read/cs/goodBook.do',
+          }
+          if section not in approved_paths or (section != 'auto' and site != 'tx.com.cn'):
+              raise SystemExit('Public section only supports tx.com.cn')
+          preferred_path = approved_paths[section]
           if site not in paths or scheme not in ('http', 'https') or profile not in ('wap1', 's60'):
               raise SystemExit('Non-allowlisted capture input')
           url = scheme + '://' + paths[site]
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as out:
               out.write('TARGET_URL=' + url + '\n')
+              out.write('PREFERRED_PATH=' + preferred_path + '\n')
           root = Path('evidence')
           root.mkdir(exist_ok=True)
           (root / 'invocation.json').write_text(json.dumps({
               'url': url, 'profile': profile,
+              'public_section': section, 'preferred_path': preferred_path,
               'source_commit': os.environ['GITHUB_SHA'],
               'workflow_run_id': os.environ['GITHUB_RUN_ID'],
               'manual_only': True,
@@ -112,10 +135,14 @@ jobs:
           PY
       - name: Capture first page and at most one reachable GET
         run: |
+          extra=()
+          if [[ -n "$PREFERRED_PATH" ]]; then
+            extra+=(--prefer-path "$PREFERRED_PATH")
+          fi
           python -m wap_probe.pipeline \
             --url "$TARGET_URL" --profile "$DEVICE_PROFILE" \
             --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
-            --out evidence/live --execute
+            --out evidence/live --execute "${extra[@]}"
       - name: Preserve original response evidence (private artifact)
         if: always()
         uses: actions/upload-artifact@v4

@@ -31,7 +31,7 @@ def _export(capture_dir: Path, probe_dir: Path) -> Path:
 
 
 def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
-            capture_fn=capture, before_second_get=None) -> dict:
+            capture_fn=capture, before_second_get=None, preferred_path=None) -> dict:
     """Opt-in caller supplies capture_fn; never directly opens a socket here."""
     validate_url(url)
     if profile not in PROFILES:
@@ -42,6 +42,7 @@ def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
         "url": url, "profile": profile, "stage": "STARTED",
         "A_origin": "PENDING", "A_navigation": "PENDING",
         "home_capture": None, "child_capture": None,
+        "preferred_path": preferred_path,
     }
     home = folder / "home"
     try:
@@ -51,7 +52,8 @@ def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
             report["stage"] = "HOME_NOT_WML_EVIDENCE"
             return _save(folder, report)
         home_r5 = _export(home, probe_dir)
-        plan = evaluate(home, home_r5)
+        options = {"preferred_path": preferred_path} if preferred_path is not None else {}
+        plan = evaluate(home, home_r5, **options)
         report["home_bridge"] = plan
         if plan["stage"] != "CHILD_GET_REQUIRED":
             report["stage"] = plan["stage"]
@@ -72,7 +74,7 @@ def run_job(url: str, profile: str, folder: Path, probe_dir: Path, *,
             report["stage"] = "CHILD_NOT_WML_EVIDENCE"
             return _save(folder, report)
         child_r5 = _export(child, probe_dir)
-        result = evaluate(home, home_r5, child, child_r5)
+        result = evaluate(home, home_r5, child, child_r5, **options)
         report["bridge"] = result
         report["stage"] = result["stage"]
     except (OSError, ValueError, TypeError, KeyError, RuntimeError) as exc:
@@ -90,11 +92,20 @@ def main(argv=None):
     p.add_argument("--r5-dir", type=Path, default=Path(".r5_unpacked/wap-probe-live-discovery-r5/probe"))
     p.add_argument("--out", type=Path, default=Path("evidence/live"))
     p.add_argument("--execute", action="store_true", help="Explicitly perform network GET")
+    p.add_argument("--prefer-path", help="Match a safe public GET using its real R5 URL path")
     p.add_argument("--limit", type=int, default=32)
     p.add_argument("--delay", type=float, default=2.0)
     a = p.parse_args(argv)
     if a.limit < 1 or a.limit > 32 or not 1 <= a.delay <= 3600:
         p.error("Limit 1..32 and delay 1..3600 required")
+    if a.prefer_path is not None:
+        from wap_probe.navigation import validate_preferred_path
+        try:
+            validate_preferred_path(a.prefer_path)
+        except ValueError as exc:
+            p.error(str(exc))
+        if a.matrix:
+            p.error("--prefer-path requires exactly one --url target")
     jobs = matrix() if a.matrix else [(a.url, a.profile)]
     jobs = jobs[:a.limit]
     for u, _ in jobs:
@@ -125,7 +136,8 @@ def main(argv=None):
 
     for idx, (url, profile) in enumerate(jobs, 1):
         report = run_job(url, profile, a.out / f"{idx:03d}_{profile}",
-                         a.r5_dir, capture_fn=paced_capture)
+                         a.r5_dir, capture_fn=paced_capture,
+                         preferred_path=a.prefer_path)
         results.append({"url": url, "profile": profile, "stage": report["stage"]})
         print(f"{idx}/{len(jobs)} {profile} {url} -> {report['stage']}")
     (a.out / "summary.json").write_text(
