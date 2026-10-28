@@ -82,3 +82,13 @@ Equivalent explicit local invocation:
     PYTHONPATH=src python3 -m wap_probe.pipeline --url https://tx.com.cn/ \
       --profile wap1 --prefer-path /zone/cs/category.do \
       --anonymous-jsessionid --out evidence/tx-category-cookie01 --execute
+
+## Failed live session attempt: 2026-10-28
+
+Actions run #40695465360 fetched and parsed the HTTPS WML home, and selected
+/zone/cs/category.do. It **never sent the second GET**: the CLI pacing
+wrapper omitted the optional session_cookie keyword argument, raising
+TypeError before reaching curl. This run is an execution failure, NOT evidence
+that anonymous session continuity failed. The CLI wrapper now forwards the
+optional session cookie, and a full CLI-level mock regression verifies exactly
+two requests, preserved pacing, and non-disclosure in the run report.

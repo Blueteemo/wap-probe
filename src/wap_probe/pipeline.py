@@ -158,9 +158,11 @@ def main(argv=None):
 
     # The first capture uses its own call; every subsequent request (including
     # navigation) has a >= delay gap.
-    def paced_capture(url, profile, folder):
+    def paced_capture(url, profile, folder, *, session_cookie=None):
         throttle()
-        return capture(url, profile, folder)
+        if session_cookie is None:
+            return capture(url, profile, folder)
+        return capture(url, profile, folder, session_cookie=session_cookie)
 
     for idx, (url, profile) in enumerate(jobs, 1):
         report = run_job(url, profile, a.out / f"{idx:03d}_{profile}",

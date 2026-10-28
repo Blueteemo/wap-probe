@@ -159,6 +159,72 @@ class PipelineTests(unittest.TestCase):
                             preferred_path=path, anonymous_session=True)
             self.assertEqual(list(Path(root).iterdir()), [])
 
+    def test_cli_anonymous_session_actually_reaches_second_get(self):
+        """Regression for run 40695465360: main's paced wrapper must forward token."""
+        session = "0123456789abcdef0123456789ABCDEF"
+        seen = []
+        def fake_capture(url, profile, folder, **kwargs):
+            seen.append((url, kwargs))
+            Path(folder).mkdir()
+            if len(seen) == 1:
+                (Path(folder) / "headers.bin").write_bytes(
+                    ("HTTP/1.1 200 OK\r\nSet-Cookie: JSESSIONID="
+                     + session + "; Path=/; HttpOnly\r\n\r\n").encode())
+                return {"classification": "WML_CAPTURED_NEEDS_R5"}
+            return {"classification": "REDIRECT"}
+        def fake_bridge(home, home_r5, child=None, child_r5=None, **kw):
+            self.assertEqual(kw["preferred_path"], "/zone/cs/category.do")
+            self.assertIsNone(child)
+            return {"stage": "CHILD_GET_REQUIRED", "next_get": {
+                "url": "https://tx.com.cn/zone/cs/category.do?z=900000012",
+                "method": "GET", "profile": "wap1", "follow_redirects": False}}
+        with tempfile.TemporaryDirectory() as root:
+            location = Path(root)
+            probe = location / "probe"
+            probe.mkdir()
+            (probe / "wap_probe.py").write_text("# stub", encoding="utf-8")
+            out = location / "out"
+            with mock.patch.object(pipeline, "capture", side_effect=fake_capture):
+                with mock.patch.object(pipeline, "_export",
+                                       side_effect=lambda p, q: p / "r5_export.json"):
+                    with mock.patch.object(pipeline, "evaluate",
+                                           side_effect=fake_bridge):
+                        with mock.patch.object(pipeline.time, "sleep") as sleeping:
+                            exit_code = pipeline.main([
+                                "--url", "https://tx.com.cn/", "--profile", "wap1",
+                                "--r5-dir", str(probe), "--out", str(out),
+                                "--prefer-path", "/zone/cs/category.do",
+                                "--anonymous-jsessionid", "--execute"])
+                            sleeping.assert_called_once_with(2.0)
+            report = __import__("json").loads(
+                (out / "001_wap1" / "run_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(report["stage"], "CHILD_NOT_WML_EVIDENCE")
+            self.assertEqual(report["anonymous_session_mode"], "jsessionid_https_only")
+            self.assertEqual(len(seen), 2)
+            self.assertEqual(seen[0], ("https://tx.com.cn/", {}))
+            self.assertEqual(seen[1][1], {"session_cookie": session})
+            self.assertNotIn(session,
+                (out / "001_wap1" / "run_report.json").read_text(encoding="utf-8"))
+
+    def test_cli_normal_mode_still_passes_no_cookie_keyword(self):
+        seen = []
+        def fake_capture(url, profile, folder, **kwargs):
+            seen.append((url, kwargs))
+            Path(folder).mkdir()
+            return {"classification": "HTML"}
+        with tempfile.TemporaryDirectory() as root:
+            location = Path(root)
+            probe = location / "probe"
+            probe.mkdir()
+            (probe / "wap_probe.py").write_text("# stub", encoding="utf-8")
+            with mock.patch.object(pipeline, "capture", side_effect=fake_capture):
+                result = pipeline.main([
+                    "--url", "http://tx.com.cn/", "--r5-dir", str(probe),
+                    "--out", str(location / "out"), "--execute"])
+        self.assertEqual(result, 0)
+        self.assertEqual(seen, [("http://tx.com.cn/", {})])
+
     def test_html_home_stops_after_one_get(self):
         urls=[]
         def fake_capture(url,profile,folder):
