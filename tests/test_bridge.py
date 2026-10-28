@@ -14,7 +14,7 @@ CHILD_BODY = b'<wml><card id="next"><p>Next</p></card></wml>'
 
 
 def write_capture(root, url, body, *, profile="wap1", mime="text/vnd.wap.wml"):
-    root.mkdir(parents=True)
+    root.mkdir(parents=True, exist_ok=True)
     headers = (
         f"HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\n"
         f"Content-Length: {len(body)}\r\n\r\n"
