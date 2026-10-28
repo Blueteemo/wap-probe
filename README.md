@@ -69,3 +69,11 @@ PYTHONPATH=src python3 -m wap_probe.bridge --home evidence/home \
 4. 真实采集成功后再讨论 A-origin / A-navigation 验收与扩展。
 
 License 暂未确定，公开前再核对来源和授权。
+
+## R5 源码已入库（不可变归档）
+
+原始 R5 稳定 ZIP 存于 `vendor/r5/`，其 SHA-256 在 CI 中严格校验；自动解包后运行原有 139 项测试及新增真实 R5→R6 适配测试。参见 [R5 迁移说明](docs/R5_SOURCE.md)。
+
+**注意：** 这只验证离线代码和模拟 HTTP 证据，不等于发现在线 A-origin / A-navigation，也不构成真实设备或 WAP Gateway 验证。
+
+GitHub Actions 只在 main push 或手动触发时运行，日常开发不创建 PR、不启用 PR 自动测试。

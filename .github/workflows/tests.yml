@@ -3,7 +3,6 @@ name: Offline Python Tests
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -12,15 +11,44 @@ permissions:
 jobs:
   offline:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       PYTHONPATH: src
+      R5_PROBE_DIR: .r5_unpacked/wap-probe-live-discovery-r5/probe
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Compile Python sources
+      - name: Verify immutable R5 and unpack
+        run: |
+          python - <<'PY'
+          import hashlib
+          import pathlib
+          import zipfile
+          archive = pathlib.Path("vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip")
+          expected = "cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa"
+          actual = hashlib.sha256(archive.read_bytes()).hexdigest()
+          if actual != expected:
+              raise SystemExit(f"Frozen R5 SHA-256 mismatch: {actual}")
+          destination = pathlib.Path(".r5_unpacked")
+          with zipfile.ZipFile(archive) as z:
+              for entry in z.infolist():
+                  item = pathlib.PurePosixPath(entry.filename)
+                  if item.is_absolute() or ".." in item.parts or "\\" in entry.filename:
+                      raise SystemExit("Unsafe R5 archive path")
+              z.extractall(destination)
+          print("Frozen R5 archive SHA-256 verified and extracted")
+          PY
+      - name: Compile current Python sources
         run: python -m compileall -q src tests
-      - name: Run standard-library unit tests
+      - name: Run R6 and real R5 adapter tests
         run: python -m unittest discover -s tests -v
+      - name: Run frozen R5 original tests
+        run: |
+          set -eu
+          for component in probe discovery integrations; do
+            echo "===== R5 $component ====="
+            (cd ".r5_unpacked/wap-probe-live-discovery-r5/$component" \
+              && python -m unittest discover -p 'test_*.py' -q)
+          done

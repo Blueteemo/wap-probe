@@ -225,3 +225,6 @@ captures/
 *.capture.bin
 .env.*
 !.env.example
+
+# Frozen R5 is unpacked in CI; never commit extracted binaries/reports
+.r5_unpacked/
