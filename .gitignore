@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# WAP Probe evidence: may contain captured data and volatile HTTP artifacts
+evidence/
+captures/
+*.capture.bin
+.env.*
+!.env.example
