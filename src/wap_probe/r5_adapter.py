@@ -71,12 +71,14 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
     try:
         xml_body = core.decode_wmlc(body)[0] if mime == "application/vnd.wap.wmlc" else body
         parsed_forms = inspect_forms(
-            xml_body, "text/vnd.wap.wml" if mime.endswith("wmlc") else content_type)
+            xml_body, "text/vnd.wap.wml" if mime.endswith("wmlc") else content_type,
+            include_action_hrefs=True)
         if len(parsed_forms) != len(analysis["cards"]):
             parsed_forms = []
     except (ValueError, TypeError, UnicodeError):
         parsed_forms = []
 
+    go_targets = [set(item.pop("_action_hrefs", [])) for item in parsed_forms]
     cards = []
     for card_index, card in enumerate(analysis["cards"]):
         links = []
@@ -87,7 +89,8 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
             # Such links must never become automatic second-page targets.
             # GET may be state-changing. Never treat a WML <go> action as
             # implicit safe navigation, whether it has postfields or not.
-            if link.get("kind") == "go":
+            if (link.get("kind") == "go"
+                    or (go_targets and link.get("href") in go_targets[card_index])):
                 continue
             if link.get("requires_inputs"):
                 continue

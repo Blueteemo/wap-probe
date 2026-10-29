@@ -103,7 +103,8 @@ def _action(node) -> dict:
     }
 
 
-def inspect_forms(raw: bytes, content_type: str = "text/vnd.wap.wml") -> list[dict]:
+def inspect_forms(raw: bytes, content_type: str = "text/vnd.wap.wml", *,
+                  include_action_hrefs: bool = False) -> list[dict]:
     """Return per-card control/action metadata; safe for untrusted XML.
 
     The caller must separately verify that this raw body came from an accepted
@@ -148,5 +149,9 @@ def inspect_forms(raw: bytes, content_type: str = "text/vnd.wap.wml") -> list[di
             "field_count": count_fields, "action_count": count_actions,
             "truncated": count_fields > MAX_FIELDS or count_actions > MAX_ACTIONS,
             "read_only": True,
+            **({"_action_hrefs": [
+                node.get("href") for node in card.iter()
+                if _tag(node) == "go" and isinstance(node.get("href"), str)
+            ]} if include_action_hrefs else {}),
         })
     return result
