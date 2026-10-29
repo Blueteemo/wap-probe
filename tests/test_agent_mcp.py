@@ -53,8 +53,11 @@ class AgentWmlcTests(unittest.TestCase):
             self.assertTrue(view["text_available"])
             self.assertEqual(view["format"], "wmlc")
             self.assertIn("查看目录", view["text"])
-            self.assertIn("二进制 WAP 页面", view["text"])
-            self.assertTrue(view["links"] or view["card_count"] >= 1)
+            second = page_view(folder, card_index=1)
+            self.assertEqual(second["active_card_index"], 1)
+            self.assertIn("二进制 WAP 页面", second["text"])
+            self.assertEqual(view["card_count"], second["card_count"])
+            self.assertTrue(view["card_links"] or view["card_count"] >= 1)
 
     def test_modified_r5_export_text_not_blindly_trusted(self):
         source = (R5_DIR / "fixtures" / "binary_portal.wmlc").read_bytes()
