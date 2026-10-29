@@ -67,10 +67,33 @@ def _scan_bytes(data: bytes, label: str, findings: set[tuple[str, str]],
             privacy.add((label, kind))
 
 
+def _material_category(path: str, depth: int) -> str | None:
+    """Conservative *path-level* triage; not a legal authorship finding."""
+    normalized = path.replace(chr(92), "/").lower()
+    if "__macosx/" in normalized or "/._" in normalized:
+        return None
+    if not normalized.endswith((".bin", ".wml", ".wmlc", ".wbxml",
+                                ".html", ".xhtml", ".xml", ".json")):
+        return None
+    if depth and (normalized.startswith("deepseek_review/evidence/")
+                  or "/reports/online_attempt/" in normalized):
+        return "external_origin_capture_or_manifest_candidate"
+    if depth and normalized.startswith("deepseek_review/diff/sources/"):
+        return "external_origin_reference_document_candidate"
+    if depth and normalized.startswith("deepseek_review/diff/roundtrip/"):
+        return "generated_comparison_output"
+    if "/fixtures/" in normalized or "/diff/samples/" in normalized:
+        return "test_fixture_provenance_check"
+    if "/reports/" in normalized:
+        return "historical_report_or_capture_check"
+    return "other_archive_data"
+
+
 def _scan_archive(data: bytes, base: str, *, depth: int,
                   license_paths: set[str], candidate_sources: list[int],
                   findings: set[tuple[str, str]], inventory: list[dict],
-                  privacy: set[tuple[str, str]]):
+                  privacy: set[tuple[str, str]],
+                  materials: list[dict]):
     if depth > 2:
         return
     with zipfile.ZipFile(io.BytesIO(data)) as z:
@@ -87,6 +110,14 @@ def _scan_archive(data: bytes, base: str, *, depth: int,
                 continue
             raw = z.read(member)
             _scan_bytes(raw, base + ":" + _safe_label(name), findings, privacy)
+            category = _material_category(name, depth)
+            if category:
+                materials.append({
+                    "path": base + ":" + name,
+                    "category": category,
+                    "size": len(raw),
+                    "sha256_12": hashlib.sha256(raw).hexdigest()[:12],
+                })
             if is_source:
                 parts = name.replace(chr(92), "/").split("/")
                 metadata = "__MACOSX" in parts or parts[-1].startswith("._")
@@ -115,7 +146,8 @@ def _scan_archive(data: bytes, base: str, *, depth: int,
                     _scan_archive(raw, base + ":" + _safe_label(name),
                                   depth=depth + 1, license_paths=license_paths,
                                   candidate_sources=candidate_sources,
-                                  findings=findings, inventory=inventory, privacy=privacy)
+                                  findings=findings, inventory=inventory, privacy=privacy,
+                                  materials=materials)
                 except zipfile.BadZipFile:
                     pass
 
@@ -130,9 +162,11 @@ def main() -> None:
     suspicious: set[tuple[str, str]] = set()
     privacy: set[tuple[str, str]] = set()
     inventory: list[dict] = []
+    materials: list[dict] = []
     _scan_archive(ARCHIVE.read_bytes(), "frozen-r5.zip", depth=0,
                   license_paths=license_paths, candidate_sources=source_count,
-                  findings=suspicious, inventory=inventory, privacy=privacy)
+                  findings=suspicious, inventory=inventory, privacy=privacy,
+                  materials=materials)
     objects = _git("rev-list", "--objects", "--all").decode("utf-8", "replace").splitlines()
     blobs = 0
     archive_blobs = 0
@@ -151,7 +185,7 @@ def main() -> None:
                     _scan_archive(raw, "git-history-zip:" + _safe_label(path),
                                   depth=0, license_paths=set(),
                                   candidate_sources=[0], findings=suspicious,
-                                  inventory=[], privacy=privacy)
+                                  inventory=[], privacy=privacy, materials=[])
                 except zipfile.BadZipFile:
                     _scan_bytes(raw, "git-history-zip:" + _safe_label(path), suspicious, privacy)
             continue
@@ -160,6 +194,12 @@ def main() -> None:
         blobs += 1
         raw = _git("cat-file", "-p", sha)
         _scan_bytes(raw, "git-history:" + _safe_label(path), suspicious, privacy)
+
+    material_summary: dict[str, dict[str, int]] = {}
+    for item in materials:
+        group = material_summary.setdefault(item["category"], {"count": 0, "bytes": 0})
+        group["count"] += 1
+        group["bytes"] += item["size"]
 
     outcome = {
         "scope": "all locally available Git history + current R5 ZIP and nested ZIPs",
@@ -174,6 +214,7 @@ def main() -> None:
             p["type"] != "macos-metadata" for p in inventory),
         "r5_macos_metadata_false_source_candidates": sum(
             p["type"] == "macos-metadata" for p in inventory),
+        "r5_archive_material_by_provenance_category": material_summary,
         "r5_unique_source_hashes": len({
             p["sha256_12"] for p in inventory if p["type"] != "macos-metadata"}),
         "privacy_review_signal_categories": sorted({kind for _, kind in privacy}),
@@ -188,6 +229,12 @@ def main() -> None:
     print("PUBLICATION_AUDIT " + json.dumps(outcome, ensure_ascii=False, sort_keys=True))
     for entry in sorted(inventory, key=lambda p: p["path"]):
         print("PUBLICATION_SOURCE " + json.dumps(entry, ensure_ascii=False, sort_keys=True))
+    for entry in sorted(materials, key=lambda p: p["path"]):
+        if entry["category"] in (
+            "external_origin_capture_or_manifest_candidate",
+            "external_origin_reference_document_candidate",
+        ):
+            print("PUBLICATION_MATERIAL " + json.dumps(entry, ensure_ascii=False, sort_keys=True))
     # Do not fail the ordinary offline reader CI solely because licensing
     # review remains incomplete. Visibility changes require manual review.
     if privacy:
