@@ -2,7 +2,11 @@
 
 WAP Probe 是用于传统 WAP 协议研究、WML/WMLC 解析、HTTP 证据采集与验证、离线回放及互操作测试的 Python 工程。
 
-**当前工程状态：冻结 R5 已入库，R6 离线证据层已接入真实 R5 解析器。** R5 源码及其原有测试保存在不可变 ZIP 归档中，由 GitHub Actions 验证 SHA-256 后解包运行；这不是在线站点的 A 级验收。
+**当前工程状态：R8 在线 WML 存活调查已结项；8 个重点历史入口中有 5 个取得同源 HTTP/WML 双页证据，且经冻结 R5 和独立 WaveNav 复核。实体旧机／原生 WSP/WDP 仍未测试。**
+
+**[查看 2026-10-29 最终清单、等级与设备兼容性边界](docs/FINAL_FINDINGS_20261029.md)**
+
+**冻结 R5 已入库，R6 离线证据层已接入真实 R5 解析器。** R5 源码及其原有测试保存在不可变 ZIP 归档中，由 GitHub Actions 验证 SHA-256 后解包运行；这不是在线站点的 A 级验收。
 
 ## 工程结构
 
@@ -74,7 +78,7 @@ PYTHONPATH=src python3 -m wap_probe.pipeline --url http://tx.com.cn/ \
   --profile wap1 --out evidence/tx-wap1 --execute
 ```
 
-`--execute` 为必选的联网开关；默认仅预览任务。参见 [R6 采集说明](docs/LIVE_CAPTURE.md)。CI 不自动扫描站点；所有 A 级结论仍为 PENDING，直到人工复核真实采集证据。
+`--execute` 为必选的联网开关；默认仅预览任务。参见 [R6 采集说明](docs/LIVE_CAPTURE.md)。CI 不自动扫描站点；原采集器的 A 级机器字段仍为 PENDING，人工 HTTP/WML 证据分级参见 [最终清单](docs/FINAL_FINDINGS_20261029.md)。
 
 
 ### 2026-10-29: 两处国内 WML 双页实网取证

@@ -236,3 +236,22 @@ offline test and explicit manual sample workflows. R5 archive and production
 pipeline are unchanged. Sanitized R7 engine results artifact
 `r7-wavenav-results-40847596595` (artifact ID 12884534955) is retained
 for 7 days; the persistent CI log and this report preserve the outcome.
+
+## R8 completion and final index — 2026-10-29
+
+All eight priority domestic historical candidate origins now have at least one
+bounded direct-origin HTTP sampling result. Five serve original WML home and
+actual WML child pages: shufaji, 517ming, ee1234, uc123 and Blue G Lab.
+TX and CCTV have WML home-only evidence; CCTV's content is dated 2006.
+The exact historical IP138 train WML URL redirects to a different service.
+UC123 child is a redirect card, not usable external news content.
+
+Independent WaveNav replay at pinned `9cd7ab97`: prior R7 6/6; newly
+captured R8 sample 7/7; Blue G Lab GB2312 origin bytes strictly decoded to
+Unicode after SHA-256 comparison, then 3/3 load and render success. No new
+external WAP site GET was required for those independent replays.
+
+The authoritative concise survey closure, status table, source hashes,
+run links and legacy handset limitations are now at
+[FINAL_FINDINGS_20261029.md](FINAL_FINDINGS_20261029.md). All temporary R8
+workflows are retired. Source archive and production pipeline are unchanged.
