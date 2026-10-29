@@ -264,7 +264,7 @@ An Agent calls `wap_import_wsp` with an empty argument object, receives an opaqu
 
 See [MCP import security and usage](docs/MCP_WSP_IMPORT_20261029.md) and the [overall project roadmap](docs/PROJECT_ROADMAP_20261029.md).
 
-The private, rootless, read-only Agent MVP is estimated at **80%–85% complete**; this does not measure full WAP 1.x browser compatibility.
+At the v0.8.3 milestone, the private rootless Agent MVP was estimated at **80%–85% complete**; the current v0.9.0 delivery estimate is **about 90%**. These are judgment calls, not a measure of full WAP 1.x browser compatibility.
 
 
 ### v0.9.0 — Private release candidate and clean install acceptance
@@ -286,4 +286,4 @@ This is an **offline installation smoke test**, not a substitute for separate, h
 
 ### Public release preparation and macOS install verification (2026-10-29)
 
-A GitHub-hosted **macOS 15 / Python 3.12** clean editable install and installed CLI/MCP offline smoke test passed, alongside the previous Ubuntu Python 3.10/3.12 checks. A full-history audit scanned 242 historical text blobs without matching its selected common credential patterns; the bundled R5 archive contains 44 source-like files but no detected standalone license, and the repository has no root LICENSE. **The existing private repository has not been changed to public** until provenance and history can be reviewed. [Findings and proposed publication route](docs/PUBLICATION_READINESS_20261029.md).
+A GitHub-hosted **macOS 15 / Python 3.12** clean editable install and installed CLI/MCP offline smoke test passed, alongside the previous Ubuntu Python 3.10/3.12 checks. The initial scan checked 242 historical text blobs; the 2026-10-30 expanded audit examined 436 historical blobs and one Git-history ZIP with no hits for its selected common credential patterns; the bundled R5 archive contains 44 source-like files but no detected standalone license, and the repository has no root LICENSE. **The existing private repository has not been changed to public** until provenance and history can be reviewed. [Findings and proposed publication route](docs/PUBLICATION_READINESS_20261029.md).

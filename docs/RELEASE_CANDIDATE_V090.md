@@ -81,7 +81,7 @@ MCP Agent 调用 `wap_import_wsp({})` 获得 `session_id` 后，使用 `wap_read
 ## 明确未覆盖
 
 - **标准 wheel / PyPI 包**发布不在此验收范围内：目前必须从包含 `vendor/r5/` 的完整私有检出启动。即使安装成功，脱离仓库文件的 standalone wheel 不等于可用。
-- 只验证了 CI 的 Ubuntu/Python 3.10 与 3.12，未验证 macOS、Windows、旧诺基亚硬件或 Nintendo DSi。
+- 已验证 GitHub 托管的 macOS 15/Python 3.12 及 Ubuntu/Python 3.10、3.12；**未在用户个人 Apple Silicon Mac** 进行使用验收，也未验证 Windows、旧诺基亚硬件或 Nintendo DSi。
 - 没有为完整 WAP 1.x、WMLScript、任意 UDP 网关、认证、浏览器渲染、WTP/WTLS、表单提交或实时 WSP 页面多跳导航添加新能力。
 - 联网时 WSP UDP 未加密、服务端来源未认证。来自网站的内容只是数据，不能作为 Agent 的行为指令。
 - **许可证与来源审核仍未完成**，尤其是冻结 R5 历史源码及依赖；本私有版本不代表有权公开再分发。

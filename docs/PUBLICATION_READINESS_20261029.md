@@ -54,3 +54,52 @@ Official GitHub docs:
 The same CI run [#40896484977](https://github.com/Blueteemo/wap-probe/actions/runs/40896484977) also passed a **clean editable install on a GitHub-hosted macOS 15 runner with Python 3.12**, using the three installed entrypoints and offline HTTP/WML + WSP/WMLC + MCP smoke tests. This **does not** certify the user's actual Apple Silicon Mac, macOS-specific UI, or hardware WAP protocols. Ubuntu Python 3.10/3.12 tests and the full frozen R5 suite remain in place.
 
 **Private v0.9.0 remains usable without a public release.** Public visibility is the next publication decision, not a technical prerequisite for finishing the Agent's read-only MVP.
+
+---
+
+## 2026-10-30 复核：R5 文件级来源清单与公开决策 / Source-level review
+
+This section supersedes the earlier **raw 44-source-candidate count** for rights triage. It does not rewrite the immutable original archive or assert a license grant.
+
+### 重新核对的统计口径 / Corrected inventory
+
+- Outer R5 ZIP: **83 archive entries**. Nested `probe/research/deepseek_review_original.zip`: **268 entries**, including AppleDouble metadata.
+- The original 44 source-like filenames split into **24 primary R5 Python files + 10 nested historical Python files + 10 non-source `__MACOSX/._*.py` AppleDouble entries**.
+- The **34 genuine Python file instances represent 33 distinct SHA-256 contents**. The primary and nested `test_http_integration.py` are byte-identical. The other nested `probe/` files are *historical versions*, not proof of new, independent third-party projects.
+- The upgraded publication-audit job scanned **436 small Git-history blobs and one historical ZIP** (including the ZIP's nested archive); its selected credential patterns found **zero hits**. This does not clear every form of sensitive data, Action log, or copyright issue.
+- Exact outer R5 ZIP SHA-256 is still `cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa`; the 139 original R5 regression cases are preserved.
+
+### 文件清单 / File-level provenance triage
+
+Each file below is **present in the frozen research archive**, with no individual license grant found. Classification is functional provenance evidence, **not confirmed legal authorship**. The project-recorded archive entered Git in commit [`8cd230e`](https://github.com/Blueteemo/wap-probe/commit/8cd230ef22f8b002f88cc850fe3f8143fd4a347e), authored by 千岚之夏; a Git commit author alone does not establish the copyright chain for every earlier generated or imported file.
+
+| R5 primary path(s), relative to `wap-probe-live-discovery-r5/` | Function and source clues | Rights disposition |
+| --- | --- | --- |
+| `probe/wap_probe.py`, `probe/wap_wbxml.py` | Core original project parsing pipeline; WBXML token tables cite standards/Android kXML as references | **Critical.** Confirm independently implemented code and token-table provenance before A |
+| `probe/wap_browser.py`, `probe/wap_capture.py`, `probe/wap_compare.py`, `probe/wap_replay.py` | Historical WML navigation, capture, comparison and replay tools | Project-created code indicated by archive structure and research notes; rights confirmation outstanding |
+| `probe/test_browser.py`, `probe/test_capture.py`, `probe/test_compare.py`, `probe/test_external_replay.py`, `probe/test_http_integration.py`, `probe/test_probe.py`, `probe/test_transport_fake_ip.py`, `probe/test_wbxml.py` | 8 R5 local fixtures and regression test modules; `test_http_integration.py` also exists byte-identically in nested history | Project test suite, not evidence of copied external library; rights confirmation outstanding |
+| `discovery/discover_links.py`, `discovery/plan_current_probes.py` | Project discovery and candidate planning | Project-specific scripts; rights confirmation outstanding |
+| `discovery/test_discover.py`, `discovery/test_plan.py` | Discovery regression tests | Project tests; rights confirmation outstanding |
+| `integrations/wap_labs_import.py`, `integrations/run_wapcurl.py`, `integrations/compare_evidence.py` | Project Python interop wrappers; **references/executes** separately provided WAP Labs `wapcurl` rather than bundling Lowband Rust source | Confirm no copied code in wrappers; external command and protocol compatibility do not by themselves impose MIT on wrappers |
+| `integrations/test_wap_labs_import.py`, `integrations/test_run_wapcurl.py`, `integrations/test_compare_evidence.py` | Interop tests with synthetic samples | Project tests; rights confirmation outstanding |
+| Nested `deepseek_review/probe/wap_probe.py`, `wap_wbxml.py`, `wap_browser.py` | Older historical code snapshots of the same named parser/browser components | Confirm historical origin once, not separate unrelated licensors by default |
+| Nested `deepseek_review/probe/test_probe.py`, `test_wbxml.py`, `test_browser.py`, `test_http_integration.py` | Historical project tests; last file is identical to primary copy | Project snapshots; one exact duplicate; rights confirmation outstanding |
+| Nested `deepseek_review/diff/make_samples.py`, `diff_wbxml.py`, `roundtrip_lib.py` | Historical differential test tools cite W3C/OMA, Android kXML and **external libwbxml**, rather than containing a libwbxml library distribution | Confirm independent test implementation and any borrowed expression; reference use alone is not source-code relicensing |
+
+There are **no C/Rust/Java/JS source files** among the 34 real entries. Do not count `__MACOSX/` AppleDouble records as code. Do not delete them from the immutable private archive merely to improve the count.
+
+### 第三方边界 / Third-party materials and what they do *not* imply
+
+1. **WAP Labs / Lowband**: independent `tests/fixtures/lowband_*_reference.json` fixtures and `LOWBAND_LICENSE.txt` have MIT attribution and can be managed under that notice. The private R5 archive mentions and uses the separate `wapcurl` tooling for experiments; that does not license the entire R5 tree under MIT. Upstream: [WAP Labs](https://github.com/dills122/wap-labs).
+2. **libwbxml**: named in the nested differential testing scripts as an external oracle/CLI, not vendored as a library. Upstream code is LGPL-family licensed; do not reclassify our own Python tests as libwbxml simply because they execute/compare its results. [Upstream](https://github.com/libwbxml/libwbxml).
+3. **WML/WBXML standards / Android kXML `Wml.java`**: externally documented token values and format parameters are referenced by `wap_wbxml.py` and `make_samples.py`. Numerical protocol constants and citations are not themselves proof of source copying; compare the actual table implementation and any inherited explanatory text if granting a broad MIT license.
+4. **External-site captures**, WML response bodies, historical fixtures and research notes have separate content/provenance/privacy considerations. A legitimate anonymous GET is not automatically permission to republish all captured third-party content. Assess these separately before exposing full Git history.
+5. **Archived review pack**: old locally generated `__MACOSX` AppleDouble/quarantine metadata is not source code. Keep in frozen R5 privately for provenance; review any human-sensitive metadata before a public release.
+
+### Publication decision and next gates
+
+**Preferred path: A (same GitHub repository, full history)**, provided the owner can substantiate rights to the R5/earlier agent-generated Python files and decide a top-level license with explicit third-party exceptions; the remaining archive response data and Actions/history are also cleared. We found **no confirmed third-party source-code bundle among the enumerated Python entries**, but also **no documentary license grant for the R5 archive**. Neither outcome supports an automatic switch to Public today.
+
+**Fallback B (clean, usable public version)** is for a *specific* irreducible rights or historical-data problem, not for the mere absence of a LICENSE. The R5 parser remains runtime-critical. Any clean release must ship a confirmed licensable parser or a properly engineered equivalent and prove the same offline WMLC tests; never publish a broken shell.
+
+Before changing visibility: (1) owner confirms authorship/rights chain for historic generated parser and research scripts, especially `wap_wbxml.py` token-table provenance; (2) determine LICENSE and separate third-party notices; (3) manually review historical logs/embedded third-party responses and prior commits for confidential or non-redistributable content; (4) confirm source-only checkout install vs publishable build artifact; (5) present final visibility-change plan to owner for explicit confirmation. **No visibility change, history rewrite, frozen-R5 edit or public Release is authorized by this technical audit.**

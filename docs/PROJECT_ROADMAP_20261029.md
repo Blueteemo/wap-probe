@@ -1,6 +1,6 @@
 # WAP Probe 整体开发路线与验收范围 / Project Roadmap
 
-**2026-10-29 · Current status: v0.9.0 (private RC) · Private repository**
+**2026-10-30 review · Current status: v0.9.0 (private RC) · Private repository**
 
 ## 进度口径
 
@@ -44,7 +44,7 @@
 
 ## Open source publication / 公开发布
 
-长期私有并非项目要求。目前根目录无 LICENSE、冻结 R5 包（含 44 个源码类文件）缺少可识别的内部许可证。全 Git 历史 242 个文本对象的自动凭据特征检查未发现命中，但不能替代来源、授权与日志审查。详见 [公开发布审查](PUBLICATION_READINESS_20261029.md)。发布建议优先核验 R5 来源后公开完整仓库；若存在不具再分发权限的部分，则使用独立干净历史的可运行公开版本，不直接把现有所有历史暴露出去。
+长期私有并非项目要求。目前根目录无 LICENSE、冻结 R5 包有 24 个主要源码文件、10 个嵌套历史源码文件及 10 个误计的 macOS 元数据文件，仍缺少可识别的内部许可证。增强审查已检查 436 个历史 Blob 和一个历史 ZIP，常见凭据特征未发现命中，但不能替代来源、授权与日志审查。详见 [公开发布审查](PUBLICATION_READINESS_20261029.md)。发布建议优先核验 R5 来源后公开完整仓库；若存在不具再分发权限的部分，则使用独立干净历史的可运行公开版本，不直接把现有所有历史暴露出去。
 
 ## License and distribution
 
