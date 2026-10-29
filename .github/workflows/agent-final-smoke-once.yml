@@ -1,0 +1,82 @@
+name: Agent WML reader smoke and merged-branch retirement (one-shot)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/agent-final-smoke-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  agent-smoke-and-branch-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: One public WML GET through real Agent entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=src python -m wap_probe.agent_browser open \
+            'http://wap.shufaji.com/' --out /tmp/agent-smoke-once --execute \
+            > /tmp/agent-open.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/agent-open.json').read_text())
+          if not r.get('ok') or not r.get('text_available') or not r.get('links'):
+              raise SystemExit('Agent real open did not return readable WML and safe links')
+          matches=[x['index'] for x in r['links']
+                   if x['url'].endswith('/0x541B.wml')]
+          if not matches:
+              raise SystemExit('Expected public char detail link not in parsed Agent output')
+          Path('/tmp/agent-link-index.txt').write_text(str(matches[0]))
+          print('OPEN_PASS http_status=',r['http_status'],
+                'card_count=',r['card_count'],'safe_links=',len(r['links']),
+                'visible_text_chars=',len(r['text']))
+          PY
+      - name: Follow one real same-origin public WML link
+        shell: bash
+        run: |
+          set -euo pipefail
+          index="$(cat /tmp/agent-link-index.txt)"
+          PYTHONPATH=src python -m wap_probe.agent_browser follow \
+            --session /tmp/agent-smoke-once --link "$index" --execute \
+            > /tmp/agent-child.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/agent-child.json').read_text())
+          if not r.get('ok') or not r.get('text_available') or r.get('page_count')!=2:
+              raise SystemExit('Agent did not produce a readable second WML page')
+          print('FOLLOW_PASS http_status=',r['http_status'],
+                'visible_text_chars=',len(r['text']))
+          PY
+      - name: Verify merged security PR and delete its one stale head ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,subprocess
+          repo=os.environ['GITHUB_REPOSITORY']
+          pr=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/pulls/1'],text=True))
+          expected='863628f411ebb0a1f1aa1bb372469be6115828b7'
+          if (not pr.get('merged_at') or pr.get('head',{}).get('sha')!=expected
+              or pr.get('head',{}).get('ref')!='test/r6-offline-security'
+              or pr.get('head',{}).get('repo',{}).get('full_name')!=repo):
+              raise SystemExit('PR verification failed; stale branch left untouched')
+          ref=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/git/ref/heads/test/r6-offline-security'],text=True))
+          if ref.get('object',{}).get('sha')!=expected:
+              raise SystemExit('Branch moved since reviewed; do not delete')
+          subprocess.run(['gh','api','-X','DELETE',f'repos/{repo}/git/refs/heads/test/r6-offline-security'],check=True)
+          print('BRANCH_CLEANUP_PASS: deleted only test/r6-offline-security (merged PR #1)')
+          PY
