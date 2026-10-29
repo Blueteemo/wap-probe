@@ -28,6 +28,25 @@ SENSITIVE = {
     ),
 }
 
+# Privacy signals are review hints, not proof of a secret or a violation.
+# Match locations only; never print matching response bodies or values.
+PRIVACY_SIGNALS = {
+    "http_cookie_header": re.compile(
+        rb"(?im)^(?:set-cookie|cookie):[ \\t]*[^\\r\\n]{8,}"
+    ),
+    "authorization_header": re.compile(
+        rb"(?im)^authorization:[ \\t]*(?:basic|bearer)[ \\t]+[^\\r\\n]{8,}"
+    ),
+    "sensitive_url_query": re.compile(
+        rb"(?i)https?://[^\\s'\\\"<>]{1,500}[?&](?:token|password|passwd|"
+        rb"sessionid|api_key|access_token|auth|secret)=[^&#\\s'\\\"<>]{4,}"
+    ),
+    "personal_home_path": re.compile(
+        rb"/(?:Users|home)/(?!runner(?:/|\\b)|oai(?:/|\\b))"
+        rb"[A-Za-z0-9._-]{2,}"
+    ),
+}
+
 
 def _git(*args: str) -> bytes:
     return subprocess.check_output(["git", "-C", str(ROOT), *args])
@@ -38,15 +57,20 @@ def _safe_label(s: str) -> str:
     return Path(s).name[:85]
 
 
-def _scan_bytes(data: bytes, label: str, findings: set[tuple[str, str]]):
+def _scan_bytes(data: bytes, label: str, findings: set[tuple[str, str]],
+                privacy: set[tuple[str, str]]):
     for kind, pattern in SENSITIVE.items():
         if pattern.search(data):
             findings.add((label, kind))
+    for kind, pattern in PRIVACY_SIGNALS.items():
+        if pattern.search(data):
+            privacy.add((label, kind))
 
 
 def _scan_archive(data: bytes, base: str, *, depth: int,
                   license_paths: set[str], candidate_sources: list[int],
-                  findings: set[tuple[str, str]], inventory: list[dict]):
+                  findings: set[tuple[str, str]], inventory: list[dict],
+                  privacy: set[tuple[str, str]]):
     if depth > 2:
         return
     with zipfile.ZipFile(io.BytesIO(data)) as z:
@@ -62,7 +86,7 @@ def _scan_archive(data: bytes, base: str, *, depth: int,
             if member.file_size > 1_000_000:
                 continue
             raw = z.read(member)
-            _scan_bytes(raw, base + ":" + _safe_label(name), findings)
+            _scan_bytes(raw, base + ":" + _safe_label(name), findings, privacy)
             if is_source:
                 parts = name.replace(chr(92), "/").split("/")
                 metadata = "__MACOSX" in parts or parts[-1].startswith("._")
@@ -91,7 +115,7 @@ def _scan_archive(data: bytes, base: str, *, depth: int,
                     _scan_archive(raw, base + ":" + _safe_label(name),
                                   depth=depth + 1, license_paths=license_paths,
                                   candidate_sources=candidate_sources,
-                                  findings=findings, inventory=inventory)
+                                  findings=findings, inventory=inventory, privacy=privacy)
                 except zipfile.BadZipFile:
                     pass
 
@@ -104,10 +128,11 @@ def main() -> None:
     source_count = [0]
     license_paths: set[str] = set()
     suspicious: set[tuple[str, str]] = set()
+    privacy: set[tuple[str, str]] = set()
     inventory: list[dict] = []
     _scan_archive(ARCHIVE.read_bytes(), "frozen-r5.zip", depth=0,
                   license_paths=license_paths, candidate_sources=source_count,
-                  findings=suspicious, inventory=inventory)
+                  findings=suspicious, inventory=inventory, privacy=privacy)
     objects = _git("rev-list", "--objects", "--all").decode("utf-8", "replace").splitlines()
     blobs = 0
     archive_blobs = 0
@@ -126,9 +151,9 @@ def main() -> None:
                     _scan_archive(raw, "git-history-zip:" + _safe_label(path),
                                   depth=0, license_paths=set(),
                                   candidate_sources=[0], findings=suspicious,
-                                  inventory=[])
+                                  inventory=[], privacy=privacy)
                 except zipfile.BadZipFile:
-                    _scan_bytes(raw, "git-history-zip:" + _safe_label(path), suspicious)
+                    _scan_bytes(raw, "git-history-zip:" + _safe_label(path), suspicious, privacy)
             continue
         if size > 500_000:
             continue
@@ -151,6 +176,9 @@ def main() -> None:
             p["type"] == "macos-metadata" for p in inventory),
         "r5_unique_source_hashes": len({
             p["sha256_12"] for p in inventory if p["type"] != "macos-metadata"}),
+        "privacy_review_signal_categories": sorted({kind for _, kind in privacy}),
+        "privacy_review_signal_locations": sorted({
+            label for label, _ in privacy})[:30],
         "potential_credential_pattern_categories": sorted({kind for _, kind in suspicious}),
         "potential_credential_match_locations": sorted(
             set(label for label, _ in suspicious))[:30],
@@ -162,6 +190,8 @@ def main() -> None:
         print("PUBLICATION_SOURCE " + json.dumps(entry, ensure_ascii=False, sort_keys=True))
     # Do not fail the ordinary offline reader CI solely because licensing
     # review remains incomplete. Visibility changes require manual review.
+    if privacy:
+        print("PUBLICATION_AUDIT_NOTE Historical privacy matches require human review; no matched values printed.")
     if suspicious:
         print("PUBLICATION_AUDIT_NOTE Potential credential patterns need human review; no matched value was printed.")
 
