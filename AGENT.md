@@ -41,12 +41,14 @@ Tools:
 
 | Tool | Input | Network |
 | --- | --- | --- |
-| `wap_open` | `url`, `execute: true`, optional `profile` (`wap1`/`s60`) | Exactly one GET |
+| `wap_open` | `url`, `execute: true`, optional `profile` (`wap1`/`s60`/`wmlc`) | Exactly one GET |
 | `wap_follow` | `session_id`, `link` index, `execute: true` | Exactly one GET, same origin |
 | `wap_go` | `session_id`, `index` from `do_links[]`, `execute: true` | One explicit verified no-input do/go GET |
 | `wap_read` | `session_id` | None |
 | `wap_back` | `session_id` | None; previous card or page |
 | `wap_card` | `session_id`, `index` from `cards[]` | None; select current deck card |
+| `wap_form_plan` | `session_id`, `action`, non-sensitive `values` | None; redacted GET plan, never submit |
+| `wap_import_wsp` | No arguments; operator startup `--wsp-evidence` | None; verified local WSP record only |
 
 Results contain `structuredContent` plus a JSON text content item;
 `isError` reports missing/invalid pages or rejected requests. Sessions
@@ -159,3 +161,21 @@ An operator who already has a v0.8.2 WSP lab record starts the MCP server with `
 Unlike regular HTTP `wap_open`, **`wap_import_wsp` has no path, URL, gateway, or execute argument**. Startup configuration belongs exclusively to the host operator. It does not send UDP, never turns evidence into an HTTP capture, and does not enable WSP browsing via MCP. The imported session rejects link following and form plans even when the MCP server's separate HTTP network permission is enabled.
 
 [Offline WSP MCP import details](docs/MCP_WSP_IMPORT_20261029.md) · [Project scope and roadmap](docs/PROJECT_ROADMAP_20261029.md).
+
+
+### v0.9.0 — Clean installation, MCP contract and safe errors
+
+For a normal-user **editable install from the complete private repository**, use:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+python scripts/smoke_clean_install.py
+```
+
+The smoke script uses only synthetic HTTP/WML content and the pinned binary WMLC fixture; it launches the installed `wap-agent`, `wap-mcp` and `wap-wsp-lab` entrypoints with no `PYTHONPATH` requirement, validates CLI read/card/back and WSP import, and tests MCP JSON-RPC initialization/tool listing/host-configured import.
+
+v0.9.0 adds stable, generic CLI/MCP error messages so arbitrary exception text cannot leak local evidence file paths or submitted form data into Agent output. The **8** tools above remain limited to the pre-existing verified WML/WMLC scope. Tested in clean Python 3.10 and 3.12 environments; no macOS/Windows or standalone-wheel guarantee has been made. The frozen R5 archive remains required, the repository remains private, and no additional public WAP probing is part of installation tests.
+
+[Release candidate first-run guide](docs/RELEASE_CANDIDATE_V090.md) · [Roadmap](docs/PROJECT_ROADMAP_20261029.md).

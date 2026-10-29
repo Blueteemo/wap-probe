@@ -85,7 +85,7 @@ JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`t
 
 启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉启动参数即可让 MCP 仅能离线读取。
 
-MCP 提供七项工具：`wap_open`、`wap_follow`、`wap_go`、`wap_read`、`wap_back`、`wap_card`、`wap_form_plan`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
+MCP 当前提供八项工具：`wap_open`、`wap_follow`、`wap_go`、`wap_read`、`wap_back`、`wap_card`、`wap_form_plan`、`wap_import_wsp`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
 
 本服务为**仅限本地 stdio 的 MCP 2025-11-25 JSON-RPC 工具子集实现**，不宣称支持 Streamable HTTP 或所有可选 MCP 能力；也不会开放监听端口。
 
@@ -231,3 +231,21 @@ Agent 调用 `wap_import_wsp`（参数为空）得到 `session_id`，随后使�
 [本轮 MCP 接入与安全说明](docs/MCP_WSP_IMPORT_20261029.md) · [整体开发进度与后续路线](docs/PROJECT_ROADMAP_20261029.md)
 
 > 当前私有、免 root、只读 Agent MVP 的工程进度估算为 **80%–85%**。这一比例不适用于完整 WAP 1.x 图形浏览器。
+
+
+### v0.9.0｜私有交付候选版：干净安装与接口验收
+
+这一版聚焦交付质量，不增加协议范围。**Python 3.10、3.12 均已在全新虚拟环境中实际执行 `pip install -e .`，并通过三个安装命令入口、HTTP/WML 离线样本、WSP/WMLC 证据导入与 MCP stdio 端到端测试。** 正式 CI 继续运行全部原有测试和冻结 R5 原始测试，不会自动访问第三方 WAP 网站。
+
+CLI/MCP 已统一错误响应，拒绝在错误文本中回显本机路径、输入值等潜在敏感内容。MCP 目前为 **8 项工具**，其中 `wap_import_wsp` 仍只读取操作者启动时指定的本地记录，不具备 UDP 请求能力。
+
+**当前建议从包含冻结 R5 文件的私有源码完整检出安装；仅靠单独 wheel 无法保证解析器可用。** 如需在新系统上复现，参阅 [v0.9.0 从零安装、验收与限制](docs/RELEASE_CANDIDATE_V090.md) 与 [整体路线图](docs/PROJECT_ROADMAP_20261029.md)。
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+python scripts/smoke_clean_install.py
+```
+
+这套仅离线自检，不代替此前独立的历史 WAP 站点或 WAP Labs 公网实验网关实测。v0.9.0 属于**私有候选版本**，不是已获许可的公开发布版本。

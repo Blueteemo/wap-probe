@@ -102,8 +102,8 @@ Configure your MCP-capable Agent to spawn a **local subprocess**:
 Adapt the JSON wrapper to your Agent's settings. The `--allow-network` flag
 only enables possible network use; **each** `wap_open` or `wap_follow` tool
 call must also set `execute: true`. Remove the flag for offline-only use.
-Seven tools are exposed: `wap_open`, `wap_follow`, `wap_go`, `wap_read`,
-`wap_back`, `wap_card` and `wap_form_plan`. `wap_card` is offline-only: it selects an existing verified deck card using `session_id` and `index`. MCP sessions are ephemeral and referenced by opaque
+Eight tools are exposed: `wap_open`, `wap_follow`, `wap_go`, `wap_read`,
+`wap_back`, `wap_card`, `wap_form_plan` and `wap_import_wsp`. `wap_card` is offline-only: it selects an existing verified deck card using `session_id` and `index`. MCP sessions are ephemeral and referenced by opaque
 `session_id` values (never arbitrary filesystem paths).
 
 The local, dependency-free server implements the tested MCP **2025-11-25
@@ -264,3 +264,21 @@ An Agent calls `wap_import_wsp` with an empty argument object, receives an opaqu
 See [MCP import security and usage](docs/MCP_WSP_IMPORT_20261029.md) and the [overall project roadmap](docs/PROJECT_ROADMAP_20261029.md).
 
 The private, rootless, read-only Agent MVP is estimated at **80%–85% complete**; this does not measure full WAP 1.x browser compatibility.
+
+
+### v0.9.0 — Private release candidate and clean install acceptance
+
+This version focuses on delivery quality rather than expanding protocol behavior. **Clean virtualenv editable installs on Python 3.10 and 3.12 both passed**, exercising the three installed CLI entrypoints, synthetic HTTP/WML card navigation, an original frozen-R5 WMLC fixture imported from WSP evidence, and real MCP stdio initialize/tools/import requests.
+
+CLI and MCP error messages now use a fixed, non-sensitive vocabulary rather than echoing exception strings that may contain local paths or supplied values. The MCP tool set has **8 tools**; `wap_import_wsp` remains strictly offline and accepts no user-supplied file path or UDP endpoint.
+
+From a complete, authorized **private** repository checkout:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+python scripts/smoke_clean_install.py
+```
+
+This is an **offline installation smoke test**, not a substitute for separate, historically recorded live WAP website/WAP Labs gateway checks. A standalone wheel lacking the private frozen R5 archive is not yet supported as a complete distribution. See the [v0.9.0 first-run and release-candidate acceptance guide](docs/RELEASE_CANDIDATE_V090.md) and [project roadmap](docs/PROJECT_ROADMAP_20261029.md). The repository has **not** been cleared for public redistribution.
