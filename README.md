@@ -20,8 +20,11 @@ PYTHONPATH=src python -m wap_probe.agent_browser follow \
 PYTHONPATH=src python -m wap_probe.agent_browser back --session /tmp/wap-visit-1
 ```
 
-**Status:** Agent JSON interface implemented and covered by offline tests.
-Actual external-network browsing and native WSP/WDP are separate validations.
+**Status:** Rootless Agent JSON interface has passed offline unit tests and a
+**real two-request public WML browsing smoke test**: [run #40859035071](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071).
+It opened the shufaji homepage (HTTP 200, 7 safe links), then followed its
+actual /0x541B.wml link (HTTP 200) and extracted readable text.
+Native WSP/WDP remains outside the Agent reader's supported scope.
 The repository remains private pending license/provenance review.
 No sudo, Python third-party dependencies, cookies, auth or automatic crawling.
 

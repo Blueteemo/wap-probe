@@ -43,3 +43,20 @@ The earlier R5 gateway experiments remain research evidence only.
 
 For the finished survey see [the 2026 report](docs/FINAL_FINDINGS_20261029.md);
 for original research-grade R6 capture see [LIVE_CAPTURE](docs/LIVE_CAPTURE.md).
+
+## Verified live Agent smoke and repository hygiene (2026-10-29)
+
+[Automated, bounded smoke #40859035071](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071)
+successfully invoked this exact Agent CLI with no root privileges. It opened
+the real public `http://wap.shufaji.com/` homepage (HTTP 200, 1 card,
+7 safe links, 94 characters in the bounded text view), selected the real
+`/0x541B.wml` detail link from parsed output, and followed it with a second
+real public GET (HTTP 200, 462 visible text characters). Offline tests
+passed independently. This confirms a useful **minimum working Agent loop**,
+not conformance for WMLScript/WSP/WDP or all WML decks.
+
+Repository cleanup: merged PR #1 `test/r6-offline-security` was verified
+against its unchanged head SHA and deleted. Only `main` remains. Kept the two
+permanent workflows: offline regression tests and opt-in manual origin sample.
+The temporary smoke/cleanup workflow has been retired after successful use.
+No third-party source or sensitive original capture artifact was published.
