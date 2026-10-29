@@ -42,6 +42,11 @@ PROFILES = {
         "User-Agent": "Nokia7110/1.0 (04.88)",
         "Accept": "text/vnd.wap.wml,application/vnd.wap.wmlc;q=0.9,*/*;q=0.1",
     },
+    "wmlc": {
+        "User-Agent": "Nokia7110/1.0 (04.88)",
+        "Accept": ("application/vnd.wap.wmlc,"
+                   "text/vnd.wap.wml;q=0.7,*/*;q=0.1"),
+    },
     "s60": {
         "User-Agent": ("NokiaE63-1/100.21.110 (SymbianOS/9.2; U; Series60/3.1; "
                        "Profile/MIDP-2.0 Configuration/CLDC-1.1)"),
