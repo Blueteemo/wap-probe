@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import stat
 import tempfile
 import threading
 import unittest
@@ -37,6 +38,13 @@ class WspEvidenceTests(unittest.TestCase):
 
     def import_it(self):
         return ev.import_record(self.record, self.session)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX directory mode")
+    def test_operator_wsp_record_and_imported_session_are_private(self):
+        self.write()
+        self.import_it()
+        self.assertEqual(stat.S_IMODE(self.record.stat().st_mode), 0o700)
+        self.assertEqual(stat.S_IMODE(self.session.stat().st_mode), 0o700)
 
     def test_import_and_multicard_read_are_strictly_offline(self):
         self.write()

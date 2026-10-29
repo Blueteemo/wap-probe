@@ -211,7 +211,7 @@ def capture(url: str, profile: str, folder: Path, *,
         ):
             raise ValueError("Invalid anonymous session")
     folder = Path(folder)
-    folder.mkdir(parents=True, exist_ok=False)
+    folder.mkdir(mode=0o700, parents=True, exist_ok=False)
     header_path, body_path = folder / "headers.bin", folder / "body.bin"
     header_path.write_bytes(b"")
     body_path.write_bytes(b"")
@@ -318,7 +318,7 @@ def main(argv=None):
         return 0
     if args.out.exists() and any(args.out.iterdir()):
         parser.error("Output directory must be new/empty; refusing overwrite")
-    args.out.mkdir(parents=True, exist_ok=True)
+    args.out.mkdir(mode=0o700, parents=True, exist_ok=True)
     results = {}
     for index, (url, profile) in enumerate(jobs[:args.limit], 1):
         if index > 1:

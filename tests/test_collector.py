@@ -1,4 +1,6 @@
 import subprocess
+import os
+import stat
 import socket
 import tempfile
 import unittest
@@ -46,6 +48,15 @@ class CollectorTests(unittest.TestCase):
         self.assertNotIn("-L",cmd)
         self.assertNotIn("--location",cmd)
         self.assertNotIn("--insecure",cmd)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX directory mode")
+    def test_new_capture_evidence_folder_is_private(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / "capture"
+            collector.capture(HOME, "wap1", folder,
+                              resolver=lambda *args, **kwargs: [],
+                              runner=mock.Mock())
+            self.assertEqual(stat.S_IMODE(folder.stat().st_mode), 0o700)
 
     def test_capture_failed_dns_never_calls_runner(self):
         def dns_error(*a,**k):

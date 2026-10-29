@@ -1,5 +1,7 @@
 """Offline behavior and safety tests for the agent-facing WML browser."""
 import json
+import os
+import stat
 from pathlib import Path
 import tempfile
 import unittest
@@ -41,6 +43,17 @@ class AgentBrowserTests(unittest.TestCase):
         with patch.object(b,"follow_link") as f,patch("builtins.print"):
             self.assertEqual(b.main(["follow","--session","/tmp/unused","--link","0"]),2)
             f.assert_not_called()
+
+    @unittest.skipUnless(os.name == "posix", "POSIX directory mode")
+    def test_new_http_session_folder_is_private(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "read-session"
+            def offline_capture(url, profile, folder):
+                folder.mkdir()
+            with patch.object(b, "page_view", return_value={"ok": False, "links": []}):
+                b.open_page("http://wap.example.org/", dest,
+                            capture_page=offline_capture)
+            self.assertEqual(stat.S_IMODE(dest.stat().st_mode), 0o700)
 
     def test_first_open_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as t:

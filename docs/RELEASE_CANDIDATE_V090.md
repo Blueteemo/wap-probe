@@ -98,3 +98,7 @@ MCP Agent 调用 `wap_import_wsp({})` 获得 `session_id` 后，使用 `wap_read
 An additional job in the existing `tests.yml` workflow creates a plain `git archive --format=tar HEAD` into a new directory, runs a clean Python 3.12 editable install **from that extracted archive rather than the Git checkout**, and executes the three CLI entrypoints plus the fully offline synthetic HTTP/WML, frozen R5 WMLC and MCP stdio smoke script. This explicitly checks whether a source-only release artifact containing `vendor/r5/` is self-consistent. **This job does not publish a release and does not establish license permission to redistribute the archive.** It does not test a standalone wheel, PyPI installation, the user's Mac or binary packages.
 
 **验收结果补充（2026-10-30）：** [Run #40923216137](https://github.com/Blueteemo/wap-probe/actions/runs/40923216137) 中新增的 Source archive install Job 已通过，整个工作流 6/6 Job 成功；现有代码测试增加至 252 项，加上冻结 R5 的 139 项，共 391 项通过。该结果不意味着已可合法公开分发第三方历史取证资料。
+
+## v1.0 本地证据权限补强（2026-10-30）
+
+新创建的 HTTP 阅读会话、WSP 原始证据目录、导入后的 WSP 会话与单独 capture 输出目录使用 `mode=0700`。在 POSIX 系统中，只允许当前用户进入这些新建目录，避免常见 `umask 022` 下默认的其他用户可读权限。已有目录不会被擅自修改，目录所有者仍需控制父目录权限及分享、备份方式；Windows ACL 不在此 POSIX 测试保证内。新增独立回归测试，WSP 原始证据与冻结 R5 ZIP 不修改。

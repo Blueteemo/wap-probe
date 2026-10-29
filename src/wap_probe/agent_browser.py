@@ -249,7 +249,7 @@ def open_page(url: str, root: Path, profile: str = "wap1", *, capture_page=_capt
     if profile not in PROFILES:
         raise ValueError("Unknown profile")
     root = Path(root)
-    root.mkdir(parents=True, exist_ok=False)
+    root.mkdir(mode=0o700, parents=True, exist_ok=False)
     (root / "pages").mkdir()
     page = root / "pages" / "page-0001"
     capture_page(url, profile, page)

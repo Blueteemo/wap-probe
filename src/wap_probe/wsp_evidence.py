@@ -38,7 +38,7 @@ def write_record(folder: Path, request: bytes, response: bytes) -> None:
     """Write only a valid, allowlisted, single-GET response; never overwrite."""
     validate_packets(request, response)
     folder = Path(folder)
-    folder.mkdir(parents=True, exist_ok=False)
+    folder.mkdir(mode=0o700, parents=True, exist_ok=False)
     manifest = {
         "schema": SCHEMA,
         "gateway": f"{LAB_GATEWAY[0]}:{LAB_GATEWAY[1]}",
@@ -123,7 +123,7 @@ def import_record(folder: Path, destination: Path) -> dict:
         export = parse_r5(parsed.body, mime, probe_dir=probe)
 
     destination = Path(destination)
-    destination.mkdir(parents=True, exist_ok=False)
+    destination.mkdir(mode=0o700, parents=True, exist_ok=False)
     pages = destination / "pages"
     pages.mkdir()
     page = pages / "page-0001"
