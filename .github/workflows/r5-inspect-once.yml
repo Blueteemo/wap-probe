@@ -37,7 +37,7 @@ jobs:
           import importlib.util
           p=importlib.util.spec_from_file_location('r5wb',root/'wap_wbxml.py')
           m=importlib.util.module_from_spec(p);p.loader.exec_module(m)
-          print('WB_FUNCTIONS',[(x,str(inspect.signature(getattr(m,x)))) for x in dir(m) if not x.startswith('_') and (inspect.isfunction(getattr(m,x)) or inspect.isclass(getattr(m,x)))][:40])
+          print('WB_FUNCTIONS',[(x,str(inspect.signature(getattr(m,x)))) for x in dir(m) if not x.startswith('_') and inspect.isfunction(getattr(m,x))][:40])
           fixture=(root/'fixtures/binary_portal.wmlc').read_bytes()
           result=core.inspect_markup(fixture,'application/vnd.wap.wmlc')
           print('ANALYSIS_KEYS',sorted(result.keys()))
