@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wap-probe"
-version = "0.7.2"
+version = "0.8.0"
 description = "Rootless local WML/WMLC reader for Agents; reproducible WAP evidence toolkit"
 requires-python = ">=3.10"
 dependencies = []
@@ -12,6 +12,7 @@ dependencies = []
 [project.scripts]
 wap-agent = "wap_probe.agent_browser:main"
 wap-mcp = "wap_probe.agent_mcp:main"
+wap-wsp-lab = "wap_probe.wsp_readonly:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

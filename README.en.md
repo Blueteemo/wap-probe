@@ -33,7 +33,8 @@ The repository also preserves the frozen R5 WML/WBXML parser and the
 | Offline read/back and session history | Supported; up to 8 fetched pages, 64 history actions |
 | JSON CLI and local MCP stdio tools | Supported |
 | WMLScript, POST/forms, cookies/auth, HTML rendering | Not supported |
-| Native WSP/WDP carrier gateway and physical Nokia compatibility | Not supported / not tested |
+| Bounded connectionless WSP/WDP lab GET | Public first-party interop test passed; separate CLI |
+| General carrier gateways, WTP/WTLS and physical Nokia | Not implemented / not verified |
 
 A validated binary deck may contain variables or tags that R5 cannot
 fully model. Text is a bounded **reading view**, not a pixel-faithful render,
@@ -206,3 +207,16 @@ See the [WMLC HTTP evidence and limitations](docs/WMLC_HTTP_COMPAT_20261029.md).
 A pinned, MIT-attributed **23-case** subset of Lowband's independent Rust WBXML fixture expectations is now part of offline CI. Frozen R5 matched **12/12 valid cases** on card structure, text and non-default attributes, and rejected **11/11 invalid cases**. The reference Rust decoder expands known WML DTD defaults that R5 omits, so **raw XML output is not identical**, and full WML/DTD conformance is **not** claimed. We compared against the reference repository's declared expected outcomes; we did **not** build and execute Rust in the same CI, or discover third-party live HTTP WMLC.
 
 The fixture subset has pinned upstream commit and full MIT attribution: [independent comparison report](docs/WBXML_INDEPENDENT_REFERENCE_20261029.md). The frozen R5 source itself remains unchanged.
+
+### v0.8.0 — Read-only connectionless WSP/WDP lab experiment
+
+**First verified public first-party interop test:** one real WSP GET over UDP to WAP Labs' advertised lab gateway returned a **WSP 200 Reply** with **235 bytes of `application/vnd.wap.wmlc`**. Frozen R5 decoded one readable card. This is **not** a historical WAP origin or a general carrier-gateway compatibility claim.
+
+The `wap-wsp-lab` standalone CLI is strictly separate from the established HTTP Agent and seven MCP tools, and requires **two explicit network opt-ins**:
+
+```bash
+# Only the single hard-coded anonymous WAP Labs interoperability homepage
+wap-wsp-lab --lab --allow-network --execute
+```
+
+No root, proxy, Docker, credentials, arbitrary UDP endpoints, POST, retries, redirects or WMLScript. **The shared UDP gateway is unencrypted and has no WTLS; never transmit sensitive data.** Offline CI uses MIT-attributed Lowband WSP byte vectors and real localhost UDP with a Chinese binary WMLC fixture. See the [read-only WSP lab report](docs/WSP_READONLY_LAB_20261029.md).

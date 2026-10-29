@@ -3,8 +3,8 @@
 [简体中文 README](README.md) | [English README](README.en.md)
 
 WAP Probe is a **rootless, local, opt-in** Agent reader for public WML and
-WMLC/WBXML pages. It does not implement a GUI browser, native WSP/WDP gateway,
-HTML renderer, WMLScript interpreter, form POST or authenticated sessions.
+WMLC/WBXML pages. The standard Agent interface does not implement a GUI browser, general
+native WSP/WDP gateway or HTML renderer, WMLScript interpreter, form POST or authenticated sessions.
 
 ### Prerequisites
 
@@ -128,3 +128,9 @@ The frozen binary fixture has been served by a local-only HTTP test server and v
 ### v0.7.2 Reference WBXML regression tests
 
 The offline suite now pins 23 MIT-attributed Lowband WML 1.3 expected-output cases, including valid binary/literal/charset/extension examples and deliberately malformed data. The 12 valid cases agree with frozen R5 on the Agent's **semantic reading view** after explicitly enumerated WML DTD default-attribute normalization, while 11 invalid cases reject. This is not bit-identical XML, full WML conformance, or execution of the Rust reference decoder inside our CI. See [independent reference report](docs/WBXML_INDEPENDENT_REFERENCE_20261029.md) and `tests/test_lowband_reference.py`.
+
+### v0.8.0 Experimental WSP/WDP path — strictly separate
+
+`src/wap_probe/wsp_readonly.py` (installed as `wap-wsp-lab`) is a bounded **connectionless WSP GET over UDP** experiment for the only allowlisted first-party WAP Labs interop homepage. Both `--allow-network` and `--execute` are required and no socket opens by default. It is **not** another MCP tool; `wap_open`, `wap_follow`, `wap_go` and other Agent features still use their HTTP-only security model.
+
+Verified against WAP Labs' published gateway: WSP Reply 200, WMLC MIME, 235 binary bytes, one frozen-R5-readable card. Offline coverage: pinned Lowband request/reply byte fixtures and local UDP timeout/malformed tests. No general operator network, WTP/WTLS, vintage Nokia, or WAPDS compatibility is claimed. [Full report](docs/WSP_READONLY_LAB_20261029.md).
