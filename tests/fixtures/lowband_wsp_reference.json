@@ -1,0 +1,354 @@
+{
+  "schema": 1,
+  "provenance": {
+    "repository": "dills122/wap-labs",
+    "commit": "9cd7ab97dc6752fc1616feb3505a58603f6a45df",
+    "source": "transport-rust/tests/fixtures/transport/wsp_connectionless_matrix/matrix_fixture.json",
+    "license": "MIT",
+    "license_notice": "tests/fixtures/LOWBAND_LICENSE.txt",
+    "scope": "Exact upstream GET and Reply wire vectors, statuses and eight decode-error input cases; excludes POST execution."
+  },
+  "get": {
+    "name": "get-with-opaque-header-bytes",
+    "kind": "get",
+    "transactionId": 42,
+    "uri": "/deck.wml",
+    "contentType": null,
+    "headers": [
+      128,
+      136
+    ],
+    "body": [],
+    "statusCode": null,
+    "encoded": [
+      42,
+      64,
+      9,
+      47,
+      100,
+      101,
+      99,
+      107,
+      46,
+      119,
+      109,
+      108,
+      128,
+      136
+    ]
+  },
+  "replies": [
+    {
+      "name": "reply-success-body-to-sdu-end",
+      "kind": "reply",
+      "transactionId": 43,
+      "uri": null,
+      "contentType": "application/vnd.wap.wmlc",
+      "headers": [],
+      "body": [
+        60,
+        119,
+        109,
+        108,
+        47,
+        62
+      ],
+      "statusCode": 200,
+      "encoded": [
+        43,
+        4,
+        32,
+        1,
+        148,
+        60,
+        119,
+        109,
+        108,
+        47,
+        62
+      ]
+    },
+    {
+      "name": "reply-error-preserves-display-body",
+      "kind": "reply",
+      "transactionId": 44,
+      "uri": null,
+      "contentType": "text/plain",
+      "headers": [],
+      "body": [
+        110,
+        111,
+        116,
+        32,
+        102,
+        111,
+        117,
+        110,
+        100
+      ],
+      "statusCode": 404,
+      "encoded": [
+        44,
+        4,
+        68,
+        1,
+        131,
+        110,
+        111,
+        116,
+        32,
+        102,
+        111,
+        117,
+        110,
+        100
+      ]
+    }
+  ],
+  "statuses": [
+    [
+      16,
+      100
+    ],
+    [
+      17,
+      101
+    ],
+    [
+      32,
+      200
+    ],
+    [
+      33,
+      201
+    ],
+    [
+      34,
+      202
+    ],
+    [
+      35,
+      203
+    ],
+    [
+      36,
+      204
+    ],
+    [
+      37,
+      205
+    ],
+    [
+      38,
+      206
+    ],
+    [
+      48,
+      300
+    ],
+    [
+      49,
+      301
+    ],
+    [
+      50,
+      302
+    ],
+    [
+      51,
+      303
+    ],
+    [
+      52,
+      304
+    ],
+    [
+      53,
+      305
+    ],
+    [
+      54,
+      306
+    ],
+    [
+      55,
+      307
+    ],
+    [
+      64,
+      400
+    ],
+    [
+      65,
+      401
+    ],
+    [
+      66,
+      402
+    ],
+    [
+      67,
+      403
+    ],
+    [
+      68,
+      404
+    ],
+    [
+      69,
+      405
+    ],
+    [
+      70,
+      406
+    ],
+    [
+      71,
+      407
+    ],
+    [
+      72,
+      408
+    ],
+    [
+      73,
+      409
+    ],
+    [
+      74,
+      410
+    ],
+    [
+      75,
+      411
+    ],
+    [
+      76,
+      412
+    ],
+    [
+      77,
+      413
+    ],
+    [
+      78,
+      414
+    ],
+    [
+      79,
+      415
+    ],
+    [
+      80,
+      416
+    ],
+    [
+      81,
+      417
+    ],
+    [
+      96,
+      500
+    ],
+    [
+      97,
+      501
+    ],
+    [
+      98,
+      502
+    ],
+    [
+      99,
+      503
+    ],
+    [
+      100,
+      504
+    ],
+    [
+      101,
+      505
+    ]
+  ],
+  "negative": [
+    {
+      "name": "missing-transaction-id",
+      "encoded": [],
+      "expected": "missing-transaction-id"
+    },
+    {
+      "name": "missing-pdu-type",
+      "encoded": [
+        1
+      ],
+      "expected": "missing-pdu-type"
+    },
+    {
+      "name": "truncated-uri",
+      "encoded": [
+        1,
+        64,
+        2,
+        47
+      ],
+      "expected": "truncated-uri"
+    },
+    {
+      "name": "uri-contains-nul",
+      "encoded": [
+        1,
+        64,
+        1,
+        0
+      ],
+      "expected": "uri-contains-nul"
+    },
+    {
+      "name": "post-missing-content-type",
+      "encoded": [
+        1,
+        96,
+        1,
+        0,
+        47
+      ],
+      "expected": "missing-content-type"
+    },
+    {
+      "name": "reply-truncated-headers",
+      "encoded": [
+        1,
+        4,
+        32,
+        2,
+        136
+      ],
+      "expected": "truncated-header-section"
+    },
+    {
+      "name": "unsupported-reply-status",
+      "encoded": [
+        1,
+        4,
+        18,
+        1,
+        136
+      ],
+      "expected": "unsupported-status"
+    },
+    {
+      "name": "uintvar-overflow",
+      "encoded": [
+        1,
+        64,
+        144,
+        128,
+        128,
+        128,
+        0
+      ],
+      "expected": "uintvar-overflow"
+    }
+  ]
+}
