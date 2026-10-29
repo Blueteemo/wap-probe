@@ -1,4 +1,33 @@
-# WAP Probe
+# WAP Probe — rootless WML reader for Agents
+
+**The original goal is back:** give a local coding Agent a safe, usable interface
+to read traditional WML pages, follow a verified public link and inspect
+navigation history without root or browser automation.
+
+**Working scope:** direct HTTP(S) WML with UTF-8/GB2312 text, safe same-origin
+GET links and JSON output; R5 also validates WMLC decks, though readable WMLC
+text and native WSP/WDP are not implemented in the new Agent view.
+
+**[Agent interface and copy-paste commands](AGENT.md)** ·
+[2026 survey result](docs/FINAL_FINDINGS_20261029.md) ·
+[Research-grade capture](docs/LIVE_CAPTURE.md)
+
+```sh
+PYTHONPATH=src python -m wap_probe.agent_browser open \
+  'http://wap.shufaji.com/' --out /tmp/wap-visit-1 --execute
+PYTHONPATH=src python -m wap_probe.agent_browser follow \
+  --session /tmp/wap-visit-1 --link 0 --execute
+PYTHONPATH=src python -m wap_probe.agent_browser back --session /tmp/wap-visit-1
+```
+
+**Status:** Agent JSON interface implemented and covered by offline tests.
+Actual external-network browsing and native WSP/WDP are separate validations.
+The repository remains private pending license/provenance review.
+No sudo, Python third-party dependencies, cookies, auth or automatic crawling.
+
+---
+
+## Historical research and validation infrastructure
 
 WAP Probe 是用于传统 WAP 协议研究、WML/WMLC 解析、HTTP 证据采集与验证、离线回放及互操作测试的 Python 工程。
 
