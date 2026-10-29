@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from wap_probe.agent_browser import page_view
 from wap_probe.agent_mcp import BrowserServer
@@ -123,6 +124,21 @@ class MCPProtocolTests(unittest.TestCase):
                           "password": "should-not-accept"}})
         self.assertTrue(r["result"]["isError"])
 
+    def test_wmlc_priority_profile_is_exposed_to_mcp_without_fetching(self):
+        self.server.allow_network = True
+        tools = self.request("tools/list")["result"]["tools"]
+        opened = next(x for x in tools if x["name"] == "wap_open")
+        self.assertIn("wmlc", opened["inputSchema"]["properties"]["profile"]["enum"])
+        with patch("wap_probe.agent_mcp.open_page", return_value={
+            "ok": True, "format": "wmlc", "card_count": 2, "session": "/not-exposed",
+        }) as fake_open:
+            response = self.request("tools/call", {"name": "wap_open",
+                "arguments": {"url": "http://wap.example.org/",
+                              "execute": True, "profile": "wmlc"}})["result"]
+        self.assertFalse(response["isError"])
+        self.assertEqual(response["structuredContent"]["format"], "wmlc")
+        self.assertNotIn("session", response["structuredContent"])
+        self.assertEqual(fake_open.call_args.args[2], "wmlc")
     def test_stdio_starts_and_returns_only_json_lines(self):
         msgs = [
             {"jsonrpc": "2.0", "id": 1, "method": "initialize",

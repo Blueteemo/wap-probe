@@ -26,6 +26,7 @@ The repository also preserves the frozen R5 WML/WBXML parser and the
 | Read-only WML/WMLC form inspection | Inputs, select options, GET/POST actions, postfields and variable markers |
 | Offline GET form request planning | Validated/redacted dry-run only; no GET/POST submission |
 | WMLC/WBXML card text decoded via frozen R5 parser | Supported for tested WML code page 0 |
+| WMLC-preferred HTTP request profile | Opt-in `wmlc`; all five sampled origins still returned textual WML |
 | Safe, same-origin, GET-only link navigation | Supported; one request per step |
 | Multi-card WML/WMLC views and local `#card` navigation | Supported; current card only |
 | Legacy no-input `<do><go>` navigation | Supported via separate `do_links[]`, explicit network opt-in |
@@ -184,3 +185,17 @@ wap-agent go --session ./evidence/session-01 --index 0 --execute
 MCP provides `wap_go(session_id, index, execute: true)`, also requiring server-side `--allow-network`. This is **not GET form submission**: no postfields, scripts, stateful inputs, dynamic targets, known mutation/auth URLs or executable/download resources are allowed. Even a candidate GET may have server-side effects; only opt in for public, benign read-only pages.
 
 See [five-origin compatibility results](docs/REAL_WORLD_COMPAT_20261029.md). No live WMLC MIME, real Nokia hardware, DSi, or WSP/WDP was verified in this sample.
+
+### v0.7.1 — WMLC-preferred negotiation and controlled binary HTTP tests
+
+The optional `wmlc` profile uses the existing Nokia 7110 user agent with a WMLC-first `Accept` header. Neither the `wap1` nor `s60` defaults or the historic research matrix has changed:
+
+```bash
+wap-agent open 'http://wap.shufaji.com/' --profile wmlc --out ./evidence/wmlc-sample --execute
+```
+
+MCP `wap_open` also accepts `profile: "wmlc"`, still requiring per-call `execute: true` and the server's `--allow-network` flag. The header expresses a client preference; **it does not force servers to send compiled WML**.
+
+All five previously verified public origins returned **text WML, not binary WMLC**, when the WMLC-preferred profile was tested. One initial failed call to the calligraphy site succeeded on a single targeted retry. In separate offline CI, a real loopback HTTP server serves the frozen binary WMLC fixture under its correct MIME; the unmodified R5 parser decodes two cards including Chinese text. **This is a controlled transport fixture, not verified third-party live WMLC.**
+
+See the [WMLC HTTP evidence and limitations](docs/WMLC_HTTP_COMPAT_20261029.md). Native WSP/WDP, arbitrary WBXML, scripts and real device conformance are outside this scope.

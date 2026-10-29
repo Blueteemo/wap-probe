@@ -19,6 +19,7 @@ WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择�
 | WML/WMLC 表单结构预览（仅只读） | 输入框、选择项、GET/POST 动作、postfield、变量标记 |
 | GET 表单离线请求计划 | 已支持保守字段校验和脱敏预览，不执行 GET/POST |
 | 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
+| WMLC 优先 HTTP 请求画像 | 可选 `wmlc`；五站仅返回文本 WML |
 | 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
 | 多卡片 WML/WMLC 阅读、页内 `#card` 索引及离线切换 | 已支持；当前卡片独立显示 |
 | 传统 `<do><go>` 无输入导航 | 已支持，独立 `do_links`，每次显式允许联网 |
@@ -151,3 +152,17 @@ wap-agent go --session ./evidence/session-01 --index 0 --execute
 MCP 对应 `wap_go(session_id, index, execute: true)`，服务器仍须开启 `--allow-network`。**这不是表单 GET 提交**：POST、`postfield`、动态 URL、WMLScript、明显修改状态的路径及二进制下载不进入可浏览候选。GET 仍可能存在服务端副作用，调用前需确认目标是公开只读页面。
 
 [五站真实兼容性记录](docs/REAL_WORLD_COMPAT_20261029.md)说明网页文本、导航类型和验证边界。五站的 HTTP/WML 实网成功**不代表 WMLC 实网、实体旧手机或 WSP/WDP 已完成验收**。
+
+### v0.7.1｜WMLC 优先协商与二进制 HTTP 回归
+
+新增可选请求画像 `wmlc`，与原来的 `wap1` 使用相同 Nokia 7110 UA，但 `Accept` 优先声明 `application/vnd.wap.wmlc`。旧版 `wap1`、`s60` 和历史调查矩阵保持不变。命令行示例：
+
+```bash
+wap-agent open 'http://wap.shufaji.com/' --profile wmlc --out ./evidence/wmlc-sample --execute
+```
+
+MCP 的 `wap_open` 同样支持 `profile: "wmlc"`（仍须 `execute: true` 及服务端 `--allow-network`）。**声明希望接收 WMLC，并不代表服务器真的会返回 WMLC。**
+
+五个历史站点的 WMLC 优先实测全部得到文本 WML（其中书法集第一次请求失败，单次复核成功）；本轮 **0/5 获得第三方 HTTP WMLC 响应**。另通过仅限测试环境的本机 HTTP 服务器，验证正确 MIME 的二进制 WMLC 能被 R5 解析为两张包含中文文本的卡片；这属于**受控 HTTP 联调**，不是第三方实网 WMLC 证据。
+
+[完整协商与测试报告](docs/WMLC_HTTP_COMPAT_20261029.md)。不支持 HTML、WMLScript 或泛化的 WBXML MIME 自动识别；未添加 root、代理绕行或自动提交。

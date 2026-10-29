@@ -117,3 +117,9 @@ The dry-run planner additionally refuses duplicate control names, stateful WML e
 Public historical WML sometimes uses `<do><go>` controls rather than `<a>` to navigate between cards/decks. A narrow **no-input GET** subset is now exposed as `do_links[]` and can only be followed via CLI `go --session ... --index ... --execute` or MCP `wap_go(session_id, index, execute: true)` with the server's network opt-in. The R5 parser itself is frozen; the new candidate list is derived from inspected original WML/WMLC markup and bound to its captured byte hash. Existing `follow` never executes these controls. The form planner and form preview remain read-only, without POST or GET form submission.
 
 [Five-origin real WML compatibility results](docs/REAL_WORLD_COMPAT_20261029.md) include the successful GB2312 Blue G home-to-mobile-service path, a UC123 intermediary caveat, and clear limits (no live WMLC MIME or actual old hardware).
+
+### v0.7.1 Binary WMLC content negotiation
+
+The `wap_open` MCP tool now accepts `profile: "wmlc"` alongside `wap1` and `s60`. This does not relax network permissions or change the existing profiles. The WMLC-preferred `Accept` header only negotiates a media type; the actual observed MIME and R5 verification decide whether the result is `format: "wmlc"` or `format: "wml"`.
+
+The frozen binary fixture has been served by a local-only HTTP test server and verified through real HTTP response bytes and unmodified R5 parsing. Five public WML origins were retested under the WMLC-preferred profile; each ultimately returned text WML, **not verified WMLC**. The controlled loopback test does not justify claiming third-party WMLC live support. [Evidence and test matrix](docs/WMLC_HTTP_COMPAT_20261029.md).
