@@ -17,6 +17,13 @@ ORIGINAL = "WAP_Probe_WAP_Labs_Interop_R5_20261028.zip"
 ORIGINAL_SHA = "cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa"
 REDUCED = "R5_Parser_Only_Candidate.zip"
 PREFIX = "wap-probe-live-discovery-r5/probe/"
+PORTABLE_TESTS = (
+    "test_agent_browser.py",
+    "test_collector.py",
+    "test_delivery_contract.py",
+    "test_navigation.py",
+    "test_security_regressions.py",
+)
 KEEP = (
     PREFIX + "wap_probe.py",
     PREFIX + "wap_wbxml.py",
@@ -32,6 +39,7 @@ fixture rights still require clearance.
 
 This candidate excludes the original frozen R5 archive, historical website
 captures, nested research ZIPs, and the original 139-case research test suite.
+It includes a small, independent synthetic/local-only regression test set.
 It retains the two real R5 parser modules and a synthetic WMLC smoke fixture.
 
 Requires Python 3.10+ and curl for optional public HTTP reading.
@@ -40,6 +48,7 @@ Requires Python 3.10+ and curl for optional public HTTP reading.
     . .venv/bin/activate
     python -m pip install -e .
     python scripts/smoke_clean_install.py
+    python -m unittest discover -s tests -v
 
 MCP is offline by default (wap-mcp). Use --allow-network only for approved
 anonymous public HTTP GETs and execute: true on each requested network call.
@@ -59,10 +68,16 @@ def build(target: Path) -> dict:
     target.mkdir(mode=0o700, parents=True, exist_ok=False)
     (target / "vendor" / "r5").mkdir(parents=True)
     (target / "scripts").mkdir()
+    (target / "tests").mkdir()
     (target / "src" / "wap_probe").mkdir(parents=True)
     shutil.copyfile(ROOT / "pyproject.toml", target / "pyproject.toml")
     shutil.copyfile(ROOT / "scripts" / "smoke_clean_install.py",
                     target / "scripts" / "smoke_clean_install.py")
+    for name in PORTABLE_TESTS:
+        test_path = ROOT / "tests" / name
+        if not test_path.is_file() or test_path.is_symlink():
+            raise ValueError("Invalid portable regression test")
+        shutil.copyfile(test_path, target / "tests" / name)
     for file in sorted((ROOT / "src" / "wap_probe").glob("*.py")):
         if not file.is_file() or file.is_symlink():
             raise ValueError("Unsafe Python source entry")
@@ -102,6 +117,7 @@ def build(target: Path) -> dict:
         "reduced_archive_sha256": candidate_hash,
         "reduced_archive_members": members,
         "excluded_historical_site_captures": True,
+        "portable_regression_files": list(PORTABLE_TESTS),
         "outstanding_rights": [
             "R5 parser code and WBXML token table",
             "Synthetic WMLC fixture provenance",
