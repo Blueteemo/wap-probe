@@ -1,0 +1,111 @@
+name: One-shot public WML candidate survey (2026-10-29)
+
+# This path-specific push trigger fires only when this workflow file changes.
+# It is not a recurring scanner, and does not change the manual workflow.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/wml-one-shot-20261029.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wap-origin-one-at-a-time
+  cancel-in-progress: false
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: src
+    steps:
+      - name: Checkout WAP probe
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Verify exact frozen R5 and unpack without altering it
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import hashlib
+          import zipfile
+          source = Path('vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip')
+          expected = 'cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa'
+          if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+              raise SystemExit('Frozen R5 integrity check failed')
+          with zipfile.ZipFile(source) as z:
+              for entry in z.infolist():
+                  path = PurePosixPath(entry.filename)
+                  if path.is_absolute() or '..' in path.parts or chr(92) in entry.filename:
+                      raise SystemExit('Unsafe frozen R5 archive entry')
+              z.extractall('.r5_unpacked')
+          PY
+
+      - name: Sample six fixed public origins (at most twelve GETs total)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # These are public WML-focused hobby sites, NOT login or gateway endpoints.
+          # Each pipeline run validates public DNS, enforces direct GET (no proxy),
+          # disables redirects/cookies/auth, and stops after one optional child GET.
+          sites=(
+            'http://wap.15pmm01.com/'
+            'http://waparchive.15pmm01.com/'
+            'http://wml.moshisdragonlore.co.za/'
+            'http://wiki.bevelgacom.be/'
+            'http://wap.blamba.de/'
+            'http://wap.bs0dd.net/'
+          )
+          mkdir -p evidence
+          i=0
+          for site in "${sites[@]}"; do
+            i=$((i + 1))
+            label=$(printf '%02d' "$i")
+            echo "::group::Site $label ($site)"
+            if ! python -m wap_probe.pipeline \
+              --url "$site" --profile wap1 \
+              --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
+              --out "evidence/site-$label" --limit 1 --delay 2 --execute; then
+              echo "Collector command failed at site $label; inspect evidence."
+            fi
+            echo "::endgroup::"
+            sleep 3
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          rows = []
+          for root in sorted(Path('evidence').glob('site-??')):
+              for report in root.glob('001_wap1/run_report.json'):
+                  d = json.loads(report.read_text(encoding='utf-8'))
+                  rows.append({
+                      'site': d['url'],
+                      'stage': d.get('stage'),
+                      'home_capture': d.get('home_capture'),
+                      'child_capture': d.get('child_capture'),
+                      'grade': 'PENDING',
+                  })
+          (Path('evidence') / 'one_shot_summary.json').write_text(
+              json.dumps(rows, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(rows, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Preserve originals for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-wml-survey-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 3
