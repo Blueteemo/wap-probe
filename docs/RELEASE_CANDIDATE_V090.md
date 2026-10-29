@@ -73,6 +73,11 @@ MCP Agent 调用 `wap_import_wsp({})` 获得 `session_id` 后，使用 `wap_read
 
 **Source evidence:** GitHub Actions [run #40894620302](https://github.com/Blueteemo/wap-probe/actions/runs/40894620302) is the first green combined install matrix. Later final runs should remain green after documentation-only commits.
 
+## macOS 及公开发布审查补充（2026-10-29）
+
+- GitHub Actions [#40896484977](https://github.com/Blueteemo/wap-probe/actions/runs/40896484977) 已通过 macOS 15 / Python 3.12 全新虚拟环境、真实安装命令入口与离线 MCP/CLI 冒烟测试。这是 GitHub 托管环境，仍不能视为用户自己的 Apple Silicon Mac 实机验收。
+- 仓库不需要长期私有，但 **R5 历史源码归属、根许可证与历史日志审查尚未完成**，因此暂未调整可见性。[公开发布审查记录](PUBLICATION_READINESS_20261029.md)。
+
 ## 明确未覆盖
 
 - **标准 wheel / PyPI 包**发布不在此验收范围内：目前必须从包含 `vendor/r5/` 的完整私有检出启动。即使安装成功，脱离仓库文件的 standalone wheel 不等于可用。

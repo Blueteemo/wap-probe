@@ -13,9 +13,10 @@ automated site crawler.
 The repository also preserves the frozen R5 WML/WBXML parser and the
 2026 Chinese WAP website survey.
 
-> **Status:** private development repository, not yet approved for public
-> redistribution. License/provenance of the bundled historical R5 archive
-> has not been finalized; **do not assume this repository is open source**.
+> **Publication is intended; permanent privacy is not a project requirement.**
+> The repository currently remains private while historical frozen R5 rights,
+> licensing and Git/Actions history are reviewed. See the
+> [publication-readiness audit](docs/PUBLICATION_READINESS_20261029.md).
 
 ## What works today
 
@@ -282,3 +283,7 @@ python scripts/smoke_clean_install.py
 ```
 
 This is an **offline installation smoke test**, not a substitute for separate, historically recorded live WAP website/WAP Labs gateway checks. A standalone wheel lacking the private frozen R5 archive is not yet supported as a complete distribution. See the [v0.9.0 first-run and release-candidate acceptance guide](docs/RELEASE_CANDIDATE_V090.md) and [project roadmap](docs/PROJECT_ROADMAP_20261029.md). The repository has **not** been cleared for public redistribution.
+
+### Public release preparation and macOS install verification (2026-10-29)
+
+A GitHub-hosted **macOS 15 / Python 3.12** clean editable install and installed CLI/MCP offline smoke test passed, alongside the previous Ubuntu Python 3.10/3.12 checks. A full-history audit scanned 242 historical text blobs without matching its selected common credential patterns; the bundled R5 archive contains 44 source-like files but no detected standalone license, and the repository has no root LICENSE. **The existing private repository has not been changed to public** until provenance and history can be reviewed. [Findings and proposed publication route](docs/PUBLICATION_READINESS_20261029.md).

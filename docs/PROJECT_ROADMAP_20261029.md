@@ -28,7 +28,7 @@
 
 **Before private v1.0 / 私有稳定版剩余**
 
-1. Run one first-run install and MCP session check on the **actual intended user's system** (not only hosted Ubuntu runners); note macOS/Windows platform limits honestly.
+1. **macOS hosted CI has now passed** (macOS 15 / Python 3.12, offline installed CLI/MCP smoke). Still run a first-run install and MCP session check on the **actual user's Apple Silicon Mac**; do not equate hosted macOS CI with local-device validation.
 2. Inspect operational and maintenance details (filesystem permissions, cancellation/timeout behavior, troubleshooting, R5 provenance and dependency rights).
 3. Decide whether private v1.0 should remain source-checkout only or fund a supported distributable package; do **not** announce a standalone wheel/public release without tests and license permission.
 
@@ -41,6 +41,10 @@
 - Current and frozen regression suites pass, with documented test provenance and security limitations.
 
 **Explicitly deferred / 刻意不纳入 MVP**: graphical rendering, S60/DSi/Nokia hardware ports, WSP general gateways, WDP segmentation, WTP, WTLS, dynamic script execution, write-capable forms, authenticated services and broad unknown-site crawling. This repository is **not WAPDS**; scope and evidence are separate.
+
+## Open source publication / 公开发布
+
+长期私有并非项目要求。目前根目录无 LICENSE、冻结 R5 包（含 44 个源码类文件）缺少可识别的内部许可证。全 Git 历史 242 个文本对象的自动凭据特征检查未发现命中，但不能替代来源、授权与日志审查。详见 [公开发布审查](PUBLICATION_READINESS_20261029.md)。发布建议优先核验 R5 来源后公开完整仓库；若存在不具再分发权限的部分，则使用独立干净历史的可运行公开版本，不直接把现有所有历史暴露出去。
 
 ## License and distribution
 
