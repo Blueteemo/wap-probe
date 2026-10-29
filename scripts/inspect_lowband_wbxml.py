@@ -42,6 +42,20 @@ def main():
                   "decoder_reject" if outcome == "rejected" else
                   "same_xml" if ET.canonicalize(actual) == ET.canonicalize(
                       item["expected_xml"]) else "different_xml")
+        if expected and outcome == "accepted":
+            left = ET.fromstring(actual)
+            right = ET.fromstring(item["expected_xml"])
+            left_tags = [e.tag for e in left.iter()]
+            right_tags = [e.tag for e in right.iter()]
+            left_text = [" ".join("".join(e.itertext()).split()) for e in left.iter() if e.tag == "card"]
+            right_text = [" ".join("".join(e.itertext()).split()) for e in right.iter() if e.tag == "card"]
+            print("WMLC_COMPARE", item["id"],
+                  "same_tags=" + str(left_tags == right_tags),
+                  "same_card_text=" + str(left_text == right_text),
+                  "r5_card_text=" + repr(left_text[:2])[:250],
+                  "ref_card_text=" + repr(right_text[:2])[:250],
+                  "r5_card_attrs=" + repr([e.attrib for e in left.iter() if e.tag == "card"][:2])[:200],
+                  "ref_card_attrs=" + repr([e.attrib for e in right.iter() if e.tag == "card"][:2])[:200])
         # A valid WBXML document can still be an ineligible browser deck
         # (e.g. a self-closing <wml/> with no card).
         browser = "skipped"
