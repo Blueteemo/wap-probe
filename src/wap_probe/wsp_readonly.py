@@ -38,6 +38,71 @@ class WspReply:
     status: int
     content_type: str
     body: bytes
+    charset: str | None = None
+    extra_header_bytes: int = 0
+
+
+def _text_string(data: bytes, limit: int = 80) -> tuple[str, int]:
+    """Read one bounded WSP text-string; 0x7f is a quoted text marker."""
+    if not data:
+        raise WspProtocolError("Missing WSP text string")
+    start = 1 if data[0] == 0x7F else 0
+    end = data.find(b"\x00", start)
+    if end < start or end > limit or end == start:
+        raise WspProtocolError("Unterminated or oversized WSP text string")
+    try:
+        value = data[start:end].decode("ascii", "strict").lower()
+    except UnicodeError as exc:
+        raise WspProtocolError("Invalid WSP text string") from exc
+    if any(ord(c) < 33 or ord(c) > 126 for c in value):
+        raise WspProtocolError("Unsafe WSP text string")
+    return value, end + 1
+
+
+def _content_type(section: bytes) -> tuple[str, str | None, int]:
+    """Support explicit WML/WMLC Content-Type short/text and general forms."""
+    if not section:
+        raise WspProtocolError("Missing WSP content type")
+    first = section[0]
+    charset = None
+    if first & 0x80:
+        media = MIMES.get(first & 0x7F)
+        consumed = 1
+    elif first <= 31:
+        if first == 31:
+            length, position = decode_uintvar(section, 1)
+        else:
+            length, position = first, 1
+        if not length or length > 1024 or position + length > len(section):
+            raise WspProtocolError("Truncated WSP content-type general form")
+        fields = section[position:position + length]
+        if fields[0] & 0x80:
+            media = MIMES.get(fields[0] & 0x7F)
+            offset = 1
+        else:
+            media, offset = _text_string(fields)
+        if offset < len(fields):
+            params = fields[offset:]
+            if params[0] != 0x81:
+                raise WspProtocolError("Unsupported WSP content-type parameter")
+            if len(params) < 2:
+                raise WspProtocolError("Truncated WSP charset parameter")
+            if params[1] & 0x80:
+                names = {0x83: "us-ascii", 0x84: "iso-8859-1", 0xEA: "utf-8"}
+                charset = names.get(params[1])
+                if charset is None or len(params) != 2:
+                    raise WspProtocolError("Unsupported WSP charset parameter")
+            else:
+                charset, size = _text_string(params[1:])
+                if size + 1 != len(params) or charset not in (
+                        "us-ascii", "iso-8859-1", "utf-8"):
+                    raise WspProtocolError("Unsupported WSP text charset")
+        consumed = position + length
+    else:
+        media, consumed = _text_string(section)
+    if media not in ("text/vnd.wap.wml", "application/vnd.wap.wmlc", "text/plain"):
+        raise WspProtocolError("Unsupported WSP media type")
+    return media, charset, consumed
 
 
 def encode_uintvar(number: int) -> bytes:
@@ -83,7 +148,7 @@ def encode_get(uri: str, transaction_id: int, *, accept_wmlc: bool = True) -> by
 
 
 def decode_reply(packet: bytes, transaction_id: int) -> WspReply:
-    """Decode bounded connectionless Reply with an explicit Content-Type."""
+    """Decode a bounded WSP Reply and conservative Content-Type header."""
     if not isinstance(packet, bytes) or not 4 <= len(packet) <= MAX_PDU:
         raise WspProtocolError("Invalid WSP reply length")
     if type(transaction_id) is not int or not 0 <= transaction_id <= 255:
@@ -101,25 +166,13 @@ def decode_reply(packet: bytes, transaction_id: int) -> WspReply:
     if length < 1 or length > 4096 or offset + length > len(packet):
         raise WspProtocolError("Missing or truncated WSP header section")
     section = packet[offset:offset + length]
-    if section[0] & 0x80:
-        media = MIMES.get(section[0] & 0x7F)
-        if media is None:
-            raise WspProtocolError("Unsupported WSP media type")
-    else:
-        # Minimal text-string Content-Type. Other general WSP content-type
-        # forms are deliberately unsupported until independently tested.
-        end = section.find(b"\0")
-        if not 1 <= end <= 80:
-            raise WspProtocolError("Unsupported WSP content-type encoding")
-        try:
-            media = section[:end].decode("ascii").lower()
-        except UnicodeError as exc:
-            raise WspProtocolError("Invalid WSP content type") from exc
-        if media not in MIMES.values():
-            raise WspProtocolError("Unrecognized WSP content type")
-    body = packet[offset + length:]
-    return WspReply(transaction_id, status, media, body)
-
+    media, charset, consumed = _content_type(section)
+    # Other WSP header octets remain opaque. Never send cookies, trust location
+    # values, decode scripts, or expose the raw header section to Agent output.
+    return WspReply(
+        transaction_id, status, media, packet[offset + length:],
+        charset=charset, extra_header_bytes=length - consumed,
+    )
 
 def live_probe(*, allow_network: bool, execute: bool) -> dict:
     """One bounded UDP GET to WAP Labs' documented anonymous lab resource."""
@@ -144,11 +197,13 @@ def live_probe(*, allow_network: bool, execute: bool) -> dict:
     from wap_probe.agent_browser import frozen_r5
     from wap_probe.r5_adapter import parse_r5
     with frozen_r5() as unpacked:
-        exported = parse_r5(parsed.body, parsed.content_type, probe_dir=unpacked)
+        mime = parsed.content_type + ("; charset=" + parsed.charset if parsed.charset else "")
+        exported = parse_r5(parsed.body, mime, probe_dir=unpacked)
     return {
         "ok": True, "transport": "connectionless-wsp-over-udp",
         "source": "public-first-party-wap-labs-interop",
         "status": parsed.status, "mime": parsed.content_type,
+        "charset": parsed.charset, "extra_header_bytes": parsed.extra_header_bytes,
         "sha256": hashlib.sha256(parsed.body).hexdigest(),
         "bytes": len(parsed.body),
         "card_count": len(exported["cards"]),

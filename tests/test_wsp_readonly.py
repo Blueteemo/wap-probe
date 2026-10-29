@@ -87,6 +87,89 @@ class WspConnectionlessTests(unittest.TestCase):
         self.assertEqual(wsp.decode_reply(message, 42).content_type,
                          "text/vnd.wap.wml")
 
+    @staticmethod
+    def _reply_for_header(content_type: bytes, body: bytes = b"x",
+                          extras: bytes = b"", tid: int = 42) -> bytes:
+        headers = content_type + extras
+        return bytes((tid, 4, 0x20)) + wsp.encode_uintvar(len(headers)) + headers + body
+
+    def test_general_form_mib_charsets(self):
+        for marker, charset in ((0x83, "us-ascii"), (0x84, "iso-8859-1"),
+                                (0xEA, "utf-8")):
+            with self.subTest(charset=charset):
+                header = bytes((3, 0x94, 0x81, marker))
+                reply = wsp.decode_reply(self._reply_for_header(header), 42)
+                self.assertEqual(reply.content_type, "application/vnd.wap.wmlc")
+                self.assertEqual(reply.charset, charset)
+                self.assertEqual(reply.body, b"x")
+                self.assertEqual(reply.extra_header_bytes, 0)
+
+    def test_general_form_long_length_quote(self):
+        header = b"\x1f\x03\x94\x81\xea"
+        reply = wsp.decode_reply(self._reply_for_header(header, b"wbxml"), 42)
+        self.assertEqual(reply.charset, "utf-8")
+        self.assertEqual(reply.body, b"wbxml")
+
+    def test_general_form_text_charset(self):
+        header = b"\x0b\x94\x81utf-8\x00"
+        # Verify the declared length strictly (eight bytes for 0x94, 0x81, utf-8, NUL).
+        header = b"\x08\x94\x81utf-8\x00"
+        reply = wsp.decode_reply(self._reply_for_header(header), 42)
+        self.assertEqual(reply.charset, "utf-8")
+
+    def test_text_quoted_content_type_and_opaque_other_headers(self):
+        mime = b"\x7ftext/vnd.wap.wml\x00"
+        reply = wsp.decode_reply(
+            self._reply_for_header(mime, b"<wml/>", b"\x91\x94"), 42)
+        self.assertEqual(reply.content_type, "text/vnd.wap.wml")
+        self.assertEqual(reply.extra_header_bytes, 2)
+        self.assertEqual(reply.body, b"<wml/>")
+        self.assertNotIn("headers", reply.__dict__)
+
+    def test_reject_malformed_or_unsupported_content_type_parameters(self):
+        bad = (
+            b"\x03\x94\x81\xff",     # Unknown MIB enum
+            b"\x02\x94\x81",         # Missing charset value
+            b"\x03\x94\x82\xea",     # Not Charset parameter
+            b"\x04\x94\x81\xea\x00", # Trailing garbage within general form
+            b"\x03\x94\x81\x04",     # Bare unsupported charset value
+            b"\x04\x94\x81\xea\x00", # Nonzero trailing parameter
+            b"\x04\x94\x81\xea\x81", # Unknown additional parameter
+            b"\x1f\x81",             # Truncated general long length
+            b"\x05\x94",             # General form overruns header section
+            b"\x7f\xff\x00",         # Invalid ASCII in quoted text
+            b"\x01\xfe",             # Unknown media token
+            b"\x00",                 # Empty general form
+        )
+        for ct in bad:
+            with self.subTest(ct=ct.hex()):
+                with self.assertRaises(wsp.WspProtocolError):
+                    wsp.decode_reply(self._reply_for_header(ct), 42)
+
+    def test_explicit_latin1_source_charset_end_to_end_over_udp(self):
+        body = ('<?xml version="1.0" encoding="iso-8859-1"?>'
+                '<wml><card id="latin"><p>café</p></card></wml>'
+               ).encode("iso-8859-1")
+        def respond(request):
+            return self._reply_for_header(b"\x03\x88\x81\x84", body, tid=request[0])
+        address, thread, problems, seen = self._udp_peer(respond)
+        with patch.object(wsp, "LAB_GATEWAY", address):
+            response = wsp.live_probe(allow_network=True, execute=True)
+        thread.join(3)
+        self.assertFalse(problems)
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(response["mime"], "text/vnd.wap.wml")
+        self.assertEqual(response["charset"], "iso-8859-1")
+        self.assertIn("café", response["card_text_preview"][0])
+
+    def test_wsp_response_header_bytes_not_misclassified_as_body(self):
+        data = self._reply_for_header(b"\x94", b"\x03\x0a\x6a\x00",
+                                      extras=b"\x91\x94")
+        reply = wsp.decode_reply(data, 42)
+        self.assertEqual(reply.body, b"\x03\x0a\x6a\x00")
+        self.assertEqual(reply.extra_header_bytes, 2)
+        self.assertIsNone(reply.charset)
+
     def test_unsafe_get_inputs_rejected(self):
         for uri in ("ftp://evil.example/", "http://u:p@example.org/",
                     "http://example.org/?action=delete", "http://example.org/#x",
