@@ -137,6 +137,45 @@ jobs:
           unset PYTHONPATH
           .smoke-venv/bin/python scripts/smoke_clean_install.py
 
+
+  one-time-private-prepublication-backup:
+    name: One-time private prepublication Git bundle
+    # One-off archive handoff: download the resulting artifact into private Drive,
+    # then remove this temporary job before any public visibility change.
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'backup: private prepublication Git bundle') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bundle complete locally reachable Git history and immutable R5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wap-prepublication"
+          git bundle create "$RUNNER_TEMP/wap-prepublication/wap-probe-20261030.bundle" --all
+          git bundle verify "$RUNNER_TEMP/wap-prepublication/wap-probe-20261030.bundle" > "$RUNNER_TEMP/wap-prepublication/bundle-verify.txt" 2>&1
+          cp vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip "$RUNNER_TEMP/wap-prepublication/FROZEN_R5_20261028.zip"
+          git rev-parse HEAD > "$RUNNER_TEMP/wap-prepublication/HEAD.txt"
+          git rev-list --all --count > "$RUNNER_TEMP/wap-prepublication/commit-count.txt"
+          (
+            cd "$RUNNER_TEMP/wap-prepublication"
+            sha256sum wap-probe-20261030.bundle FROZEN_R5_20261028.zip > SHA256SUMS.txt
+          )
+          printf '%s\\n' 'PRIVATE ARCHIVE — not for public distribution' 'Contains full prepublication repository history and frozen R5; preserve privately. Restore using git clone ./wap-probe-20261030.bundle new-dir. Historical captured website content has not been cleared for redistribution.' > "$RUNNER_TEMP/wap-prepublication/README-PRIVATE.txt"
+      - name: Transfer archive to private backup storage only
+        uses: actions/upload-artifact@v4
+        with:
+          name: PRIVATE-wap-probe-prepublication-20261030
+          path: ${{ runner.temp }}/wap-prepublication/
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 6
+
   publication-audit:
     name: Historical source and public-readiness triage
     runs-on: ubuntu-latest
