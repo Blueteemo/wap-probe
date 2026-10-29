@@ -159,7 +159,7 @@ def main() -> None:
             continue
         blobs += 1
         raw = _git("cat-file", "-p", sha)
-        _scan_bytes(raw, "git-history:" + _safe_label(path), suspicious)
+        _scan_bytes(raw, "git-history:" + _safe_label(path), suspicious, privacy)
 
     outcome = {
         "scope": "all locally available Git history + current R5 ZIP and nested ZIPs",
