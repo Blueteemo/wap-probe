@@ -18,14 +18,14 @@ The WML specification defines GET form behavior as adding `postfield` parameters
 
 - `<go method="get" href="/literal/path.wml">` with a literal destination and **no pre-existing query string, fragment, `$` variables, or embedded URL credentials**.
 - One to eight `<postfield name="public_name" value="$(variable)"/>` entries. Form variable names and parameter names are simple ASCII identifiers.
-- Each referenced variable must correspond to an input of type `text` or `url`, or a single-select with an exact declared option value. All required variables must be explicitly supplied.
-- UTF-8 `application/x-www-form-urlencoded` query encoding; only default ports and HTTP/HTTPS public DNS names; same origin as captured page. Rejects suspicious mutation/authentication paths and sensitive input/parameter names.
+- Each referenced variable must correspond to a plain `text` input without unsupported format masks, or a single-select with unique declared values and no `onpick` behavior. All required variables must be explicitly supplied.
+- UTF-8 `application/x-www-form-urlencoded` query encoding (a non-UTF-8 WML document must explicitly declare `accept-charset="utf-8"` on the `go` action); only default ports and HTTP/HTTPS public DNS names; same origin as captured page. Rejects suspicious mutation/authentication paths and sensitive input/parameter names.
 - Maximum 128 characters per supplied value, bounded total target length, no control characters, no unknown/unused variables. GET is still **not certified side-effect-free**.
 
 ## Deliberately unsupported
 
 - POST or any form submission, login/session/cookie behavior, uploading, credential exchange, WMLScript, WSP/WDP, JavaScript, or automatic follow-up.
-- `<setvar>`, nonliteral/dynamic `href`, unknown variable conversion, interpolation beyond the simple `$(name)` postfield expression, multi-select, arbitrary URL query composition, explicit non-UTF-8 charsets, hidden/password input values, sensitive field names, and redirect handling.
+- Stateful card events (`onevent`, `timer`, `refresh`, `prev`, `noop`), `<setvar>`, duplicate control names, select `onpick`, duplicate option values, masked inputs and nonliteral/dynamic `href`, unknown variable conversion, interpolation beyond the simple `$(name)` postfield expression, multi-select, arbitrary URL query composition, explicit non-UTF-8 charsets, hidden/password input values, sensitive field names, and redirect handling.
 - Any attempt to treat the request digest as approval to execute. A SHA-256 digest of predictable query content can be guessed; it is not anonymity, secrecy, or an authorization token.
 
 ## Outputs and safety
@@ -45,3 +45,7 @@ wap-agent form-plan --session ./evidence/session-01 --action 0 --values-file ./m
 MCP: `wap_form_plan(session_id, action, values)`; this tool is always offline, even when `--allow-network` is enabled.
 
 Tests are in `tests/test_form_plan.py` alongside the original collector, R5 adapter, and MCP safety regression tests.
+
+## Compatibility verification (v0.6.1)
+
+[Compatibility matrix and execution-gate decision](FORM_COMPATIBILITY.md) documents the new offline negative/positive test cases and the conservative decision **not to enable live GET form submission**. The frozen R5 parser remains unchanged.

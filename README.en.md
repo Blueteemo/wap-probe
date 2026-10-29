@@ -165,3 +165,6 @@ An offline-only MCP tool, `wap_form_plan(session_id, action, values)`, is also a
 
 See [GET form planning and security policy](docs/FORM_GET_PLAN.md).
 
+### v0.6.1 — Form compatibility and safety hardening
+
+The offline matrix now exercises duplicate control variables, WML stateful events and `setvar`, option `onpick`, duplicate choice values, input format masks, and source-charset uncertainty. The planner fails closed when it cannot reproduce the original device's form semantics. For GB2312 source documents it requires an explicit `accept-charset="utf-8"` on the GET action. **Actual GET form submission remains disabled:** GET alone does not prove a server operation is side-effect-free. See the [compatibility and execution-gate decision](docs/FORM_COMPATIBILITY.md). Existing JSON CLI, MCP, and card navigation continue unchanged.

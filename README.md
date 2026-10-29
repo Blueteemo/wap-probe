@@ -130,3 +130,8 @@ MCP 同步提供离线工具 `wap_form_plan(session_id, action, values)`，不�
 
 规范与具体约束参见 [GET 表单计划与安全策略](docs/FORM_GET_PLAN.md)。
 
+### v0.6.1｜表单兼容性与安全加固
+
+本轮增加 12 组离线兼容性测试。对重复控件名、`onevent` / `setvar` 等状态操作、选择项 `onpick`、重复选项值、`format` 掩码以及不确定的字符集处理，均采取**无法准确模拟则拒绝生成请求计划**的策略。GB2312 页面只有显式声明 `accept-charset="utf-8"` 时才可进入当前保守的 UTF-8 规划路径。**不开放 GET 表单实际提交**：方法为 GET 并不能保证服务端无副作用。
+
+完整兼容性矩阵及是否开放执行接口的决定见 [WML 表单兼容性报告](docs/FORM_COMPATIBILITY.md)。原有 CLI、MCP 阅读与卡片导航保持不变。

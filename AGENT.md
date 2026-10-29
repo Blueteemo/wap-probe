@@ -107,3 +107,6 @@ All proposals derive from captured bytes already checked by the R6 evidence gate
 
 The R6 byte provenance, published WAP spec guidance, and detailed rejection policy are described in [FORM_GET_PLAN.md](docs/FORM_GET_PLAN.md).
 
+### v0.6.1 Compatibility decision
+
+The dry-run planner additionally refuses duplicate control names, stateful WML events and `setvar`, active option `onpick`, repeated option values, unsupported input masks, and ambiguous character-set behavior. Non-UTF-8 source documents need explicit UTF-8 `accept-charset`. No GET submission tool is available, even with the MCP `--allow-network` switch; the [compatibility report](docs/FORM_COMPATIBILITY.md) records why this remains disabled.
