@@ -25,7 +25,8 @@ The repository also preserves the frozen R5 WML/WBXML parser and the
 | WML text (UTF-8, GB2312/GBK, Big5) | Supported |
 | WMLC/WBXML card text decoded via frozen R5 parser | Supported for tested WML code page 0 |
 | Safe, same-origin, GET-only link navigation | Supported; one request per step |
-| Offline read/back and local session history | Supported; up to 8 pages |
+| Multi-card WML/WMLC views and local `#card` navigation | Supported; current card only |
+| Offline read/back and session history | Supported; up to 8 fetched pages, 64 history actions |
 | JSON CLI and local MCP stdio tools | Supported |
 | WMLScript, POST/forms, cookies/auth, HTML rendering | Not supported |
 | Native WSP/WDP carrier gateway and physical Nokia compatibility | Not supported / not tested |
@@ -60,18 +61,19 @@ and `PYTHONPATH=src python3 -m wap_probe.agent_mcp`.
 ```bash
 wap-agent open 'http://wap.shufaji.com/' --out ./evidence/session-01 --execute
 wap-agent read --session ./evidence/session-01
+# Only when cards[] contains index=1: switch to that card without a GET
+wap-agent card --session ./evidence/session-01 --index 1
 wap-agent follow --session ./evidence/session-01 --link 0 --execute
 wap-agent back --session ./evidence/session-01
 ```
 
-`follow --link` must use an index from the actual `links` array of the
-current page; index 0 is only an example, not necessarily your intended
-destination. Each `open` or `follow` requires `--execute` and performs
+`follow --link` must use a link index from the **active card's** `links` array; index 0 is only an example. `card --index` uses `cards[].index`, does not need `--execute` and never fetches another URL. For card-local `#id` navigation, use `card_links[].target_index` with `card`. `back` restores the prior card or fetched page. Each `open` or `follow` requires `--execute` and performs
 at most **one** public GET. No automatic redirects, cross-origin hopping,
 credentials, cookies, form submissions, JavaScript or WMLScript execution.
 
 Responses include `ok`, `url`, `http_status`, `mime`, `format`,
-`text`, `text_available`, `links`, `sha256`, `cursor` and
+`text`, `text_available`, `active_card_index`, `cards`, `card_links`,
+`links`, `sha256`, `cursor` and
 `page_count`. Non-WML responses and errors are reported, not treated as
 valid content. Raw evidence in local sessions may include **Set-Cookie**;
 keep the entire session folder private and never commit it.
@@ -95,8 +97,8 @@ Configure your MCP-capable Agent to spawn a **local subprocess**:
 Adapt the JSON wrapper to your Agent's settings. The `--allow-network` flag
 only enables possible network use; **each** `wap_open` or `wap_follow` tool
 call must also set `execute: true`. Remove the flag for offline-only use.
-Four tools are exposed: `wap_open`, `wap_follow`, `wap_read`, and
-`wap_back`. MCP sessions are ephemeral and referenced by opaque
+Five tools are exposed: `wap_open`, `wap_follow`, `wap_read`,
+`wap_back`, and `wap_card`. `wap_card` is offline-only: it selects an existing verified deck card using `session_id` and `index`. MCP sessions are ephemeral and referenced by opaque
 `session_id` values (never arbitrary filesystem paths).
 
 The local, dependency-free server implements the tested MCP **2025-11-25

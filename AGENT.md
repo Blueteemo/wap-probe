@@ -18,14 +18,16 @@ privileged installation is necessary.
 PYTHONPATH=src python3 -m wap_probe.agent_browser open \
   'http://wap.shufaji.com/' --out evidence/session-01 --execute
 PYTHONPATH=src python3 -m wap_probe.agent_browser read --session evidence/session-01
+# Only when cards[] contains index=1; no network request is made
+PYTHONPATH=src python3 -m wap_probe.agent_browser card --session evidence/session-01 --index 1
 PYTHONPATH=src python3 -m wap_probe.agent_browser follow \
   --session evidence/session-01 --link 0 --execute
 PYTHONPATH=src python3 -m wap_probe.agent_browser back --session evidence/session-01
 ```
 
-Use an actual returned `links[].index`; do not guess. Each `open` or
+Use an actual returned **active-card** `links[].index`; do not guess. The `cards` array lists available card IDs and indices; `card_links[].target_index` identifies a valid local `#card` target. `card` switches within the already downloaded deck without a GET, and `back` can undo card selections. Each `open` or
 `follow` makes at most one explicit public GET. Bounded local history:
-8 pages. No auto-follow redirects, authentication, cookies, scripts, forms,
+8 fetched pages and 64 bounded history actions. No auto-follow redirects, authentication, cookies, scripts, forms,
 automated crawling, or arbitrary host traversal. All raw capture files,
 which may include Set-Cookie headers, remain local and must not be committed.
 
@@ -42,7 +44,8 @@ Tools:
 | `wap_open` | `url`, `execute: true`, optional `profile` (`wap1`/`s60`) | Exactly one GET |
 | `wap_follow` | `session_id`, `link` index, `execute: true` | Exactly one GET, same origin |
 | `wap_read` | `session_id` | None |
-| `wap_back` | `session_id` | None |
+| `wap_back` | `session_id` | None; previous card or page |
+| `wap_card` | `session_id`, `index` from `cards[]` | None; select current deck card |
 
 Results contain `structuredContent` plus a JSON text content item;
 `isError` reports missing/invalid pages or rejected requests. Sessions
@@ -51,12 +54,9 @@ is accepted. At most 16 MCP sessions and 8 pages per session.
 
 ### WMLC support
 
-The pinned R5 WBXML parser interprets supported WML code page 0 decks and
-produces validated card text. This text is now surfaced under `text` with
+The pinned R5 parser supplies **per-card text** for both WML and supported WMLC/WBXML code page 0 decks. The Agent only exposes links belonging to the active card. Its `cards[]` and `card_links[]` fields describe offline card selection. This text is now surfaced under `text` with
 `format: "wmlc"`, bound to the captured raw body SHA-256.
-It is a **text extraction view**: no WMLScript or variable evaluation, no
-guarantee of full WMLC spec coverage. WML text uses an independent bounded XML
-text extraction path.
+It is a **text extraction view**: no WMLScript, form submission or variable evaluation and no guarantee of full WMLC spec coverage. A separate bounded XML text utility remains available for inspection but the live Agent per-card view uses R5's validated card texts.
 
 ### Evidence, limitations, and security
 

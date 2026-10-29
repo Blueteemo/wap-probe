@@ -18,7 +18,8 @@ WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择�
 | WML 文本（UTF-8、GB2312/GBK、Big5） | 已支持 |
 | 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
 | 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
-| 离线阅读/返回、最多 8 页会话历史 | 已支持 |
+| 多卡片 WML/WMLC 阅读、页内 `#card` 索引及离线切换 | 已支持；当前卡片独立显示 |
+| 离线阅读/返回、最多 8 份网页、64 条历史动作 | 已支持 |
 | JSON CLI、本地 MCP stdio Agent 工具 | 已支持 |
 | WMLScript、表单 POST、Cookies/登录、HTML 页面渲染 | 暂不支持 |
 | 原生 WSP/WDP 运营商网关、诺基亚实体机兼容 | 未实现／未验证 |
@@ -49,15 +50,17 @@ wap-mcp --help
 ```bash
 wap-agent open 'http://wap.shufaji.com/' --out ./evidence/session-01 --execute
 wap-agent read --session ./evidence/session-01
+# 仅当 cards[] 中存在 index=1 时，离线切换到第二张卡片
+wap-agent card --session ./evidence/session-01 --index 1
 wap-agent follow --session ./evidence/session-01 --link 0 --execute
 wap-agent back --session ./evidence/session-01
 ```
 
-`follow --link` 的编号必须来自当前页面的 `links` 数组；上面的 `0` 只是示例，不保证它就是需要访问的链接。
+`follow --link` 的编号必须来自**当前卡片**的 `links` 数组；上面的 `0` 只是示例。`card --index` 必须来自 `cards[].index`，无须 `--execute`，也不会重新请求网络。首页有多张卡片时，先查看 `card_links[].target_index`，再使用 `card` 进行页内切换；`back` 可以还原此前的卡片或网页。
 
 每次 `open` 或 `follow` 都要明确使用 `--execute`，最多发出一次公开 GET。程序不会自动重定向、跨域跳转、登录、携带 Cookie、提交表单或运行 JavaScript/WMLScript。
 
-JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`links`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
+JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`active_card_index`、`cards`、`card_links`、`links`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
 
 ## MCP 接入（本地标准输入输出）
 
@@ -77,7 +80,7 @@ JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`t
 
 启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉启动参数即可让 MCP 仅能离线读取。
 
-MCP 提供四项工具：`wap_open`、`wap_follow`、`wap_read`、`wap_back`。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
+MCP 提供五项工具：`wap_open`、`wap_follow`、`wap_read`、`wap_back`、`wap_card`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
 
 本服务为**仅限本地 stdio 的 MCP 2025-11-25 JSON-RPC 工具子集实现**，不宣称支持 Streamable HTTP 或所有可选 MCP 能力；也不会开放监听端口。
 
