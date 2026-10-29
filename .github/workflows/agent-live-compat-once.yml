@@ -1,0 +1,67 @@
+name: One-shot real WML Agent compatibility sample
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/agent-live-compat-once.yml']
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Curated public WML home/child probe; sanitized summary only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          from wap_probe.agent_browser import open_page, follow_link, select_card
+          import tempfile
+          SITES = [
+              ("calligraphy", "http://wap.shufaji.com/", "/0x541B.wml"),
+              ("names", "http://wap.517ming.com/", "/helian-xing.wml"),
+              ("mobile-games", "http://wap.ee1234.com/", "/dongzuo-p1.wml"),
+              ("uc123-navigation", "http://wap.uc123.com/", "/s_3457/"),
+              ("blue-g", "http://wap.yuyangzhou.name/", "/m_service/default.wml"),
+          ]
+          with tempfile.TemporaryDirectory(prefix="wml-agent-live-") as tmp:
+              for n, (key, home, expected_path) in enumerate(SITES):
+                  root = Path(tmp) / f"session-{n:02d}"
+                  try:
+                      view = open_page(home, root, "wap1")
+                      if not view.get("ok"):
+                          print(f"LIVE {key} HOME_NON_WML status={view['http_status']} mime={view['mime']} classification={view['capture_status']}", flush=True)
+                          continue
+                      text = view.get("text")
+                      print(f"LIVE {key} HOME_OK status={view['http_status']} mime={view['mime']} cards={view['card_count']} links={len(view['links'])} text_chars={len(text) if isinstance(text,str) else -1} sha={view['sha256']}", flush=True)
+                      target_index = None
+                      for card in view["cards"]:
+                          current = select_card(root, card["index"]) if card["index"] else view
+                          for link in current["links"]:
+                              if urlsplit(link["url"]).path == expected_path:
+                                  target_index = link["index"]
+                                  break
+                          if target_index is not None:
+                              break
+                      if target_index is None:
+                          print(f"LIVE {key} CHILD_UNREACHABLE_FROM_AGENT", flush=True)
+                          continue
+                      child = follow_link(root, target_index)
+                      if not child.get("ok"):
+                          print(f"LIVE {key} CHILD_NON_WML status={child['http_status']} mime={child['mime']} classification={child['capture_status']}", flush=True)
+                          continue
+                      text = child.get("text")
+                      print(f"LIVE {key} CHILD_OK status={child['http_status']} mime={child['mime']} cards={child['card_count']} links={len(child['links'])} text_chars={len(text) if isinstance(text,str) else -1} sha={child['sha256']}", flush=True)
+                  except Exception as exc:
+                      # Do not dump raw pages, response headers, cookies or URL.
+                      print(f"LIVE {key} ERROR type={type(exc).__name__}", flush=True)
+          PY
