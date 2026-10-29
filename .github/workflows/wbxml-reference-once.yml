@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/wbxml-reference-once.yml'
+      - 'scripts/inspect_lowband_wbxml.py'
 permissions:
   contents: read
 jobs:
