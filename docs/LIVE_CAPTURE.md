@@ -92,3 +92,35 @@ TypeError before reaching curl. This run is an execution failure, NOT evidence
 that anonymous session continuity failed. The CLI wrapper now forwards the
 optional session cookie, and a full CLI-level mock regression verifies exactly
 two requests, preserved pacing, and non-disclosure in the run report.
+
+## Automated no-click anonymous session recheck: 2026-10-29
+
+GitHub Actions run [#40845259067](https://github.com/Blueteemo/wap-probe/actions/runs/40845259067),
+triggered by a temporary path-scoped push workflow, completed its bounded
+two-GET experiment without requiring a manual Actions click. The temporary
+workflow was removed after this run; the frozen R5 ZIP and pipeline are unchanged.
+
+- Home: `https://tx.com.cn/`, Nokia 7110 profile, direct HTTPS GET,
+  HTTP **200**, `text/vnd.wap.wml;charset=UTF-8`, **6,960 entity-body bytes**,
+  SHA-256 `b5ec8ba4132f2025df9bbb34dcaf736d961630ce52c88d9f8be3ff6076a44611`.
+- Frozen R5 parsed the home successfully: **one WML card and 40 parsed links**.
+  The actual homepage link at index 8 led to the public-category path
+  `/zone/cs/category.do` (channel query values are server-provided).
+- The one subsequent HTTPS GET used **only the fresh anonymous host-local
+  JSESSIONID** captured from that homepage; no login, POST or redirect following.
+  It received **HTTP 302**, pointing to the HTTP guest-entry flow
+  `/in/guest.do`. The runner did not follow the redirect or downgrade to HTTP.
+- Machine result: `CHILD_NOT_WML_EVIDENCE`,
+  `home_capture=WML_CAPTURED_NEEDS_R5`,
+  `child_capture=REDIRECT`. Both formal A gates remain **PENDING**:
+  this supports a live WML homepage but not a successfully fetched WML child.
+- Private raw evidence: artifact `tx-anon-one-shot-20261029`, artifact ID
+  `12884179095`, 3-day retention. **It includes raw Set-Cookie headers**;
+  do not publish or copy the raw artifact into Git history. The SHA and summary
+  in this section are safe non-secret audit pointers.
+
+**Implication:** anonymous JSESSIONID alone did not bypass the site's
+visitor-entry redirect on this attempt. Future checks should prefer genuinely
+public same-origin child links or identify the documented guest navigation
+flow without using login credentials; avoid repeating the same category GET
+in a loop or treating the 302 as a domain-wide failure.
