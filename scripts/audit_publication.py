@@ -99,11 +99,11 @@ def _archived_body_signals(raw: bytes) -> dict:
     else:
         family = "other_or_binary"
     hints = []
-    if re.search(rb"(?i)<(?:form|input|postfield)\\b", raw):
+    if re.search(rb"(?i)<(?:form|input|postfield)\b", raw):
         hints.append("form_markup_not_credential")
-    if re.search(rb"(?im)^(?:set-cookie|cookie|authorization):[ \\t]*\\S", raw):
+    if re.search(rb"(?im)^(?:set-cookie|cookie|authorization):[ \t]*\S", raw):
         hints.append("http_auth_or_cookie_header")
-    if re.search(rb"(?i)\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b", raw):
+    if re.search(rb"(?i)\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", raw):
         hints.append("email_like_text")
     return {"family": family, "sha256": hashlib.sha256(raw).hexdigest(),
             "size": len(raw), "signals": hints}
