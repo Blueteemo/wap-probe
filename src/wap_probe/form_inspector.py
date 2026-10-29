@@ -93,7 +93,7 @@ def _action(node) -> dict:
     ][:MAX_FIELDS]
     return {
         "method": method, "destination_kind": destination,
-        "path_preview": _label(parsed.path, 128) if parsed else "",
+        "has_path": bool(parsed and parsed.path),
         "has_query": bool(parsed and parsed.query),
         "dynamic_href": dynamic,
         "postfield_count": sum(1 for p in node.iter() if _tag(p) == "postfield"),

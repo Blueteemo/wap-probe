@@ -16,6 +16,7 @@ WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择�
 | --- | --- |
 | 公开 HTTP/HTTPS GET、公网 DNS/IP 验证、禁用自动重定向 | 已支持 |
 | WML 文本（UTF-8、GB2312/GBK、Big5） | 已支持 |
+| WML/WMLC 表单结构预览（仅只读） | 输入框、选择项、GET/POST 动作、postfield、变量标记 |
 | 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
 | 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
 | 多卡片 WML/WMLC 阅读、页内 `#card` 索引及离线切换 | 已支持；当前卡片独立显示 |
@@ -60,7 +61,7 @@ wap-agent back --session ./evidence/session-01
 
 每次 `open` 或 `follow` 都要明确使用 `--execute`，最多发出一次公开 GET。程序不会自动重定向、跨域跳转、登录、携带 Cookie、提交表单或运行 JavaScript/WMLScript。
 
-JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`active_card_index`、`cards`、`card_links`、`links`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
+JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`active_card_index`、`cards`、`card_links`、`links`、`form_preview`、`form_submission_supported`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
 
 ## MCP 接入（本地标准输入输出）
 
@@ -107,3 +108,7 @@ CI 会验证冻结 R5 SHA-256，并运行现有代码测试及不改动的 **139
 ### 实际 MCP 联网验收
 
 [MCP 真实访问验收](https://github.com/Blueteemo/wap-probe/actions/runs/40864597665) 已确认本地 stdio 进程可完成初始化、列出工具，并按 `wap_open → wap_follow → wap_back` 顺序读取书法集 WML 首页和“君”字详情（两次 HTTP 200）。WMLC 中文文本另由冻结 R5 的二进制样本在离线测试中验证。正常 CI 仍不联网。
+
+### 表单结构只读预览（v0.5.0）
+
+读取卡片时，JSON 的 `form_preview` 会列出 WML/WMLC 的 `input`、`select` / `option` 和 `go` / `postfield` 结构：字段类型、选项的显示标签、GET/POST 方法、是否使用变量，以及是否包含预填值。**预填内容、令牌、密码和 postfield 的具体值不提供。** 所有表单的 `submission_available` 都是 `false`，`form_submission_supported` 固定为 `false`；没有提交或构造 GET/POST 请求的接口。即使 WML 的 `go` 写了 `method=get`，也不会混入普通可跟随链接。页面内容仍视为不可信数据。

@@ -52,6 +52,10 @@ Results contain `structuredContent` plus a JSON text content item;
 are process-local and identified by opaque IDs; no client filesystem path
 is accepted. At most 16 MCP sessions and 8 pages per session.
 
+### Read-only WML and WMLC form inspection
+
+Every verified card can expose `form_preview`, with bounded `fields` (input and select), `options`, `actions`, `postfields`, and metadata such as `has_default`, `dynamic_default`, `method` and `has_query`. Sensitive defaults, actual postfield values and raw action query values are **never included**. `form_submission_supported` is always `false`: no POST, no GET form submit, no variable substitution, and no automatic action execution. Some GET links can modify server state, so the existing normal-navigation safety rules still apply. Preview is available only for forms that the frozen R5 validated and the bounded structural parser can interpret.
+
 ### WMLC support
 
 The pinned R5 parser supplies **per-card text** for both WML and supported WMLC/WBXML code page 0 decks. The Agent only exposes links belonging to the active card. Its `cards[]` and `card_links[]` fields describe offline card selection. This text is now surfaced under `text` with

@@ -23,6 +23,7 @@ The repository also preserves the frozen R5 WML/WBXML parser and the
 | --- | --- |
 | Public HTTP/HTTPS GET, strict DNS/IP validation, no redirects | Supported |
 | WML text (UTF-8, GB2312/GBK, Big5) | Supported |
+| Read-only WML/WMLC form inspection | Inputs, select options, GET/POST actions, postfields and variable markers |
 | WMLC/WBXML card text decoded via frozen R5 parser | Supported for tested WML code page 0 |
 | Safe, same-origin, GET-only link navigation | Supported; one request per step |
 | Multi-card WML/WMLC views and local `#card` navigation | Supported; current card only |
@@ -73,7 +74,7 @@ credentials, cookies, form submissions, JavaScript or WMLScript execution.
 
 Responses include `ok`, `url`, `http_status`, `mime`, `format`,
 `text`, `text_available`, `active_card_index`, `cards`, `card_links`,
-`links`, `sha256`, `cursor` and
+`links`, `form_preview`, `form_submission_supported`, `sha256`, `cursor` and
 `page_count`. Non-WML responses and errors are reported, not treated as
 valid content. Raw evidence in local sessions may include **Set-Cookie**;
 keep the entire session folder private and never commit it.
@@ -142,3 +143,7 @@ not redistribute the repository or frozen archive until reviewed.
 ### Live MCP acceptance
 
 [The real MCP stdio smoke test](https://github.com/Blueteemo/wap-probe/actions/runs/40864597665) confirmed process initialization, tool discovery, and `wap_open → wap_follow → wap_back` against the public calligraphy WML pages (both GET responses HTTP 200). WMLC text extraction is verified separately with a frozen binary fixture in the offline suite. Normal CI remains offline-only.
+
+### Read-only form structure preview (v0.5.0)
+
+The active card's `form_preview` exposes bounded WML/WMLC input fields, select/option labels, go actions, postfield names, GET/POST method and variable-presence indicators. **Password/token defaults, raw submitted values and action query values are never returned.** The preview does not execute actions, substitute variables, or generate GET/POST requests. `submission_available` and `form_submission_supported` remain false. WML `<go>` destinations are deliberately excluded from regular Agent navigation, even for GET methods; GET alone does not prove an operation is safe.
