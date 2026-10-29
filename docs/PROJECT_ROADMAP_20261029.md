@@ -60,3 +60,7 @@ This estimate rewards completed, tested **MVP user workflows**, not count of com
 - **当前回归目标**：252 项主项目测试 + 139 项冻结 R5 测试，共 **391 项**；保持 Python 3.10/3.12 和 macOS 15 的干净安装 CI。
 - **公开审查进展**：按文件区分 24 个 R5 主文件、10 个内层历史源码、10 个 AppleDouble 元数据误计；确认 ChatGPT v0.3/v0.3.2 项目基线与本地 DeepSeek 派生审查的开发脉络。已重点阅读 24 个历史 Actions 日志，尚不能替代全部历史公开审查。详见 [审查报告](PUBLICATION_READINESS_20261029.md)。
 - **发布决策**：先完成权属确认、外部站点取证材料可分发性核查和所有者许可证选择，再提交同仓库公开方案；单独 wheel、PyPI 和任意 UDP/WMLScript 仍不纳入 v1.0 MVP。
+ 
+### Source-only release preflight
+
+The existing offline test workflow now includes a Git-source-archive install check, using an extracted `git archive HEAD` instead of the checked-out working tree. Its result will determine whether a future **source-only** private/public release can be installed without hidden development state. A wheel or PyPI release remains unsupported until the frozen parser and license/distribution contract are addressed. No tag or GitHub Release is created by this job.

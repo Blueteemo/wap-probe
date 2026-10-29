@@ -79,6 +79,32 @@ jobs:
           unset PYTHONPATH
           .smoke-venv/bin/python scripts/smoke_clean_install.py
 
+  source-archive-smoke:
+    name: Source archive install (Python 3.12)
+    runs-on: ubuntu-latest
+    needs: offline
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build ordinary Git source archive and verify installed commands
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/wap-probe-source"
+          git archive --format=tar HEAD | tar -xf - -C "$RUNNER_TEMP/wap-probe-source"
+          cd "$RUNNER_TEMP/wap-probe-source"
+          python -m venv .release-venv
+          .release-venv/bin/python -m pip install -e .
+          export PATH="$PWD/.release-venv/bin:$PATH"
+          unset PYTHONPATH
+          .release-venv/bin/python scripts/smoke_clean_install.py
+
   macos-clean-install:
     name: macOS clean editable install (Python 3.12)
     runs-on: macos-15

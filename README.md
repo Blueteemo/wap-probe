@@ -69,7 +69,7 @@ JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`t
 
 ## MCP 接入（本地标准输入输出）
 
-支持 MCP 的 Agent 可以把下面的配置作为本地子进程启动示例（按客户端实际配置结构调整）：
+以下是**明确开启公开 HTTP 阅读权限**的 MCP 子进程配置示例（按实际客户端结构调整）；该示例不是默认离线模式：
 
 ```json
 {
@@ -83,7 +83,7 @@ JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`t
 }
 ```
 
-启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉启动参数即可让 MCP 仅能离线读取。
+启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉 `--allow-network` 即回到默认离线模式；要让离线模式可实际读取 WSP 记录，请由本机操作者额外指定 `--wsp-evidence /PATH/TO/RECORD`，再调用 `wap_import_wsp`。
 
 MCP 当前提供八项工具：`wap_open`、`wap_follow`、`wap_go`、`wap_read`、`wap_back`、`wap_card`、`wap_form_plan`、`wap_import_wsp`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
 

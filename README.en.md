@@ -86,7 +86,7 @@ keep the entire session folder private and never commit it.
 
 ## MCP stdio integration
 
-Configure your MCP-capable Agent to spawn a **local subprocess**:
+For **explicitly opt-in public HTTP reading**, configure your MCP-capable Agent to spawn this local subprocess (not the offline default):
 
 ```json
 {
@@ -102,7 +102,7 @@ Configure your MCP-capable Agent to spawn a **local subprocess**:
 
 Adapt the JSON wrapper to your Agent's settings. The `--allow-network` flag
 only enables possible network use; **each** `wap_open` or `wap_follow` tool
-call must also set `execute: true`. Remove the flag for offline-only use.
+call must also set `execute: true`. Remove the flag for the offline default; to read an existing WSP record offline, the operator must additionally pass `--wsp-evidence /PATH/TO/RECORD` at process startup and call `wap_import_wsp`.
 Eight tools are exposed: `wap_open`, `wap_follow`, `wap_go`, `wap_read`,
 `wap_back`, `wap_card`, `wap_form_plan` and `wap_import_wsp`. `wap_card` is offline-only: it selects an existing verified deck card using `session_id` and `index`. MCP sessions are ephemeral and referenced by opaque
 `session_id` values (never arbitrary filesystem paths).

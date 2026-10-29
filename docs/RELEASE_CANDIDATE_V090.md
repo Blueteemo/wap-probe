@@ -92,3 +92,7 @@ MCP Agent 调用 `wap_import_wsp({})` 获得 `session_id` 后，使用 `wap_read
 **私有 v1.0 的关键是稳定验收，而不是扩展协议**：在目标实际使用系统上执行一次真实的非 root 安装与 MCP 接入检查；复核用户端错误和文件操作权限；确认长期维护策略及历史代码来源说明。若不进行第三方重新分发，私有稳定版无需为了版本号而立即公开仓库。
 
 估算当前核心只读 Agent MVP 的工程完成程度约 **90%**，属项目管理判断，**不等同完整 WAP 浏览器的实现比例**。
+
+## Source archive release packaging preflight (2026-10-30)
+
+An additional job in the existing `tests.yml` workflow creates a plain `git archive --format=tar HEAD` into a new directory, runs a clean Python 3.12 editable install **from that extracted archive rather than the Git checkout**, and executes the three CLI entrypoints plus the fully offline synthetic HTTP/WML, frozen R5 WMLC and MCP stdio smoke script. This explicitly checks whether a source-only release artifact containing `vendor/r5/` is self-consistent. **This job does not publish a release and does not establish license permission to redistribute the archive.** It does not test a standalone wheel, PyPI installation, the user's Mac or binary packages.
