@@ -42,8 +42,8 @@ PRIVACY_SIGNALS = {
         rb"sessionid|api_key|access_token|auth|secret)=[^&#\\s'\\\"<>]{4,}"
     ),
     "personal_home_path": re.compile(
-        rb"/(?:Users|home)/(?!runner(?:/|\\b)|oai(?:/|\\b))"
-        rb"[A-Za-z0-9._-]{2,}"
+        rb"(?<![A-Za-z0-9._/-])(?:/private)?/(?:Users|home)/"
+        rb"(?!runner(?:/|\\b)|oai(?:/|\\b))[A-Za-z0-9._-]{2,}"
     ),
 }
 

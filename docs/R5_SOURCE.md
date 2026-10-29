@@ -23,3 +23,7 @@ Local tests:
 PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
 python3 -m unittest discover -s tests -v
 ```
+
+## Public redistribution status (2026-10-30)
+
+The immutable ZIP contains research fixtures, third-party origin response snapshots and one nested historical DeepSeek review archive in addition to the two runtime parser modules. There are **24 main R5 Python sources, 10 nested historical Python source versions, and 10 macOS AppleDouble metadata entries mistaken for source by filename-only scanning**. These are not 44 separate Python implementations. The live runtime now extracts only two parser modules, but shipping the full archive still redistributes all archived evidence. See [the consolidated publication review](PUBLICATION_READINESS_20261029.md) before assigning a root license or releasing the archive publicly.
