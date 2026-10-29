@@ -132,8 +132,8 @@ def live_probe(*, allow_network: bool, execute: bool) -> dict:
         sock.settimeout(TIMEOUT_SECONDS)
         sock.connect(LAB_GATEWAY)
         sock.send(wire)
-        reply, truncated = sock.recvmsg(MAX_PDU, 0)
-        if truncated & getattr(socket, "MSG_TRUNC", 0):
+        reply, _ancillary, flags, _peer = sock.recvmsg(MAX_PDU, 0)
+        if flags & getattr(socket, "MSG_TRUNC", 0):
             raise WspProtocolError("Truncated WDP datagram")
     parsed = decode_reply(reply, tid)
     if parsed.status != 200:
