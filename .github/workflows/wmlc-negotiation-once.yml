@@ -1,0 +1,53 @@
+name: One-shot WMLC content-negotiation survey
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/wmlc-negotiation-once.yml
+permissions:
+  contents: read
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Exactly one anonymous public GET per already-reviewed WML site
+        run: |
+          python - <<'PY'
+          import tempfile
+          from pathlib import Path
+          from wap_probe.agent_browser import open_page
+          sites={
+            "calligraphy":"http://wap.shufaji.com/",
+            "names":"http://wap.517ming.com/",
+            "games":"http://wap.ee1234.com/",
+            "navigation":"http://wap.uc123.com/",
+            "blueg":"http://wap.yuyangzhou.name/",
+          }
+          with tempfile.TemporaryDirectory(prefix="wmlc-negotiation-") as root:
+              for index,(name,url) in enumerate(sites.items()):
+                  try:
+                      view=open_page(url,Path(root)/f"origin-{index}",profile="wmlc")
+                      print("WMLC_NEGOTIATE",
+                            "site="+name,
+                            "status="+str(view["http_status"]),
+                            "mime="+view["mime"],
+                            "captured="+view["capture_status"],
+                            "parsed="+str(view["ok"]),
+                            "format="+str(view.get("format","none")),
+                            "cards="+str(view.get("card_count",0)),
+                            "text_chars="+str(len(view.get("text") or "")),
+                            "sha="+view["sha256"],flush=True)
+                  except Exception as exc:
+                      # No raw response, URL, headers or cookies in CI logs.
+                      print("WMLC_NEGOTIATE","site="+name,
+                            "error="+type(exc).__name__,flush=True)
+          PY
