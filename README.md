@@ -187,3 +187,10 @@ wap-wsp-lab --lab --allow-network --execute
 ```
 
 纯 Python 标准库，无需 root、Docker 或 WSP 代理。不允许任意网关、登录、POST、重试或脚本。**UDP 9200 未加密，没有 WTLS，不能传递隐私数据。** 另加入 MIT 许可的 Lowband 独立 WSP 字节测试和本机 UDP/WMLC 中文往返验证。详情：[WSP/WDP 实验链路报告](docs/WSP_READONLY_LAB_20261029.md)。
+
+
+### v0.8.1｜WSP 响应头和字符集
+
+已实现 WSP Content-Type 的通用长度格式与字符集解析，覆盖 UTF-8、US-ASCII、ISO-8859-1。未知附加响应头只统计字节数，不解释内容。新增本机 UDP / Latin-1 页面端到端回归，冻结 R5 不变。此版本没有再次访问公开实验网关，HTTP Agent 与 MCP 保持原样。
+
+详见 [兼容性报告](docs/WSP_HEADERS_CHARSET_20261029.md)。

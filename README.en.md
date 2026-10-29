@@ -220,3 +220,10 @@ wap-wsp-lab --lab --allow-network --execute
 ```
 
 No root, proxy, Docker, credentials, arbitrary UDP endpoints, POST, retries, redirects or WMLScript. **The shared UDP gateway is unencrypted and has no WTLS; never transmit sensitive data.** Offline CI uses MIT-attributed Lowband WSP byte vectors and real localhost UDP with a Chinese binary WMLC fixture. See the [read-only WSP lab report](docs/WSP_READONLY_LAB_20261029.md).
+
+
+### v0.8.1 — WSP header and charset compatibility
+
+The separate laboratory client now handles bounded WSP Content-Type general forms, including UTF-8, US-ASCII and ISO-8859-1 charset parameters. Extra response headers are treated as opaque bytes, never forwarded or displayed. New offline tests include end-to-end localhost UDP retrieval of Latin-1 WML text through frozen R5. No additional public gateway probe was performed in this release; standard HTTP Agent and MCP behavior remains unchanged.
+
+[Details and limits](docs/WSP_HEADERS_CHARSET_20261029.md).

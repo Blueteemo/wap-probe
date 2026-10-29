@@ -111,8 +111,7 @@ class WspConnectionlessTests(unittest.TestCase):
         self.assertEqual(reply.body, b"wbxml")
 
     def test_general_form_text_charset(self):
-        header = b"\x0b\x94\x81utf-8\x00"
-        # Verify the declared length strictly (eight bytes for 0x94, 0x81, utf-8, NUL).
+        # General form length = media byte + charset-name parameter + NUL.
         header = b"\x08\x94\x81utf-8\x00"
         reply = wsp.decode_reply(self._reply_for_header(header), 42)
         self.assertEqual(reply.charset, "utf-8")

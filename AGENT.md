@@ -134,3 +134,10 @@ The offline suite now pins 23 MIT-attributed Lowband WML 1.3 expected-output cas
 `src/wap_probe/wsp_readonly.py` (installed as `wap-wsp-lab`) is a bounded **connectionless WSP GET over UDP** experiment for the only allowlisted first-party WAP Labs interop homepage. Both `--allow-network` and `--execute` are required and no socket opens by default. It is **not** another MCP tool; `wap_open`, `wap_follow`, `wap_go` and other Agent features still use their HTTP-only security model.
 
 Verified against WAP Labs' published gateway: WSP Reply 200, WMLC MIME, 235 binary bytes, one frozen-R5-readable card. Offline coverage: pinned Lowband request/reply byte fixtures and local UDP timeout/malformed tests. No general operator network, WTP/WTLS, vintage Nokia, or WAPDS compatibility is claimed. [Full report](docs/WSP_READONLY_LAB_20261029.md).
+
+
+### v0.8.1 — WSP header and charset parsing
+
+The standalone `wap-wsp-lab` experiment recognizes additional bounded WSP Content-Type forms and explicit UTF-8, US-ASCII and ISO-8859-1 parameters. Unknown additional response headers remain opaque. Offline regression tests include an actual loopback UDP Latin-1 WML page decoded by frozen R5. No new MCP tool or HTTP Agent integration was introduced, and the experimental public gateway was not contacted during this update.
+
+[Protocol scope and safety notes](docs/WSP_HEADERS_CHARSET_20261029.md).
