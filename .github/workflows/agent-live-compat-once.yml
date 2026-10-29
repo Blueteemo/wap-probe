@@ -1,4 +1,4 @@
-name: One-shot Blue G WML navigation classification
+name: One-shot Blue G Agent no-input WML navigation acceptance
 on:
   push:
     branches: [main]
@@ -6,9 +6,9 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect:
+  live:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     env:
       PYTHONPATH: src
     steps:
@@ -18,44 +18,40 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: One public GET; inspect XML/R5 navigation metadata only
+      - name: Verify actual public do/go path and child WML
         shell: bash
         run: |
           python - <<'PY'
-          import tempfile,json,re,xml.etree.ElementTree as ET
+          import tempfile
           from pathlib import Path
           from urllib.parse import urlsplit
-          from wap_probe.agent_browser import open_page
-          with tempfile.TemporaryDirectory(prefix="blueg-one-shot-") as t:
-              root=Path(t)/"session"
-              result=open_page("http://wap.yuyangzhou.name/",root,"wap1")
-              assert result["ok"] and result["mime"]=="text/vnd.wap.wml"
-              folder=root/"pages"/"page-0001"
-              metadata=json.loads((folder/"metadata.json").read_text())
-              xml=(folder/"body.bin").read_bytes()
-              encoding=re.search(rb'encoding\s*=\s*["\x27]([\w-]+)',xml[:200])
-              codec=encoding.group(1).decode("ascii") if encoding else "utf-8"
-              deck=ET.fromstring(xml.decode(codec))
-              record=json.loads((folder/"r5_export.json").read_text())
-              tags={}
-              for item in deck.iter():
-                  tag=item.tag.rsplit("}",1)[-1].lower()
-                  tags[tag]=tags.get(tag,0)+1
-                  if tag in ("a","anchor","go","do"):
-                      href=item.attrib.get("href","")
-                      parsed=urlsplit(href)
-                      path=parsed.path
-                      if path and re.fullmatch(r"/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*",path):
-                          location=path
-                      else:
-                          location="[other/none]"
-                      print(f"BLUEG_NODE tag={tag} path={location} method={item.get('method','default')} postfields={len([x for x in item.iter() if x.tag.endswith('postfield')])}")
-              print(f"BLUEG_TAG_COUNTS {json.dumps(tags,sort_keys=True)}")
-              print(f"BLUEG_AGENT cards={result['card_count']} links={len(result['links'])} cards_links={len(result['card_links'])}")
-              for card in record["cards"]:
-                  print(f"BLUEG_R5 card_links={len(card.get('links',[]))}")
-                  for link in card.get("links",[])[:25]:
-                      p=urlsplit(link.get("href","")).path
-                      if p and re.fullmatch(r"/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*",p):
-                          print(f"BLUEG_R5_LINK path={p} method={link.get('method')}")
+          from wap_probe.agent_browser import open_page, follow_do, read_page
+          with tempfile.TemporaryDirectory(prefix="blueg-go-live-") as temp:
+              session = Path(temp) / "visit"
+              first = open_page("http://wap.yuyangzhou.name/", session, "wap1")
+              if not first.get("ok") or first.get("http_status") != 200:
+                  raise SystemExit("Blue G home not parsed as original HTTP WML")
+              matches = [x["index"] for x in first["do_links"]
+                         if urlsplit(x["url"]).path == "/m_service/default.wml"]
+              print("BLUEG_AGENT_HOME_OK status=200 cards=",first["card_count"],
+                    "ordinary_links=",len(first["links"]),
+                    "explicit_do_links=",len(first["do_links"]),
+                    "text_chars=",len(first["text"]),
+                    "sha=",first["sha256"],flush=True)
+              if not matches:
+                  raise SystemExit("No safe explicit do/go mobile service link")
+              second = follow_do(session, matches[0])
+              if not second.get("ok") or second.get("http_status") != 200:
+                  raise SystemExit("Agent explicit do/go did not return child WML")
+              if second.get("format") != "wml" or not second.get("text"):
+                  raise SystemExit("Expected readable WML child text")
+              back = __import__("wap_probe.agent_browser", fromlist=["go_back"]).go_back(session)
+              if back["cursor"] != 0:
+                  raise SystemExit("Back history did not restore original deck")
+              print("BLUEG_AGENT_DO_CHILD_OK status=200 cards=",second["card_count"],
+                    "ordinary_links=",len(second["links"]),
+                    "explicit_do_links=",len(second["do_links"]),
+                    "text_chars=",len(second["text"]),
+                    "sha=",second["sha256"],flush=True)
+              print("BLUEG_EXPLICIT_NAVIGATION_PASS", flush=True)
           PY
