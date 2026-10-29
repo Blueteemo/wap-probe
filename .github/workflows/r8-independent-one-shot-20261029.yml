@@ -1,0 +1,120 @@
+name: R8 independent WML replay and evidence check (one-shot)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/r8-independent-one-shot-20261029.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: dills122/wap-labs
+          ref: 9cd7ab97dc6752fc1616feb3505a58603f6a45df
+          path: external/wap-labs
+          persist-credentials: false
+      - name: Get exact private evidence; no new external WAP requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 40848278136 --repo "$GITHUB_REPOSITORY" \
+            --name r8-candidate-evidence-40848278136 --dir .r8-input
+      - name: Verify seven raw WML payloads by SHA-256
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          samples = {
+            'ee1234-home': ('ee1234/001_wap1/home/body.bin','2d6a001b69b55cfccc8f895cddf89e3e9efeb1cf0c5c03f63b7030994a81a818'),
+            'ee1234-child': ('ee1234/001_wap1/child/body.bin','dd2df6f440f3c7a3e761d181b5fd7702de32be254cb5d44f88b1ec1b9153c4e3'),
+            'uc123-home': ('uc123/001_wap1/home/body.bin','93261ba17104a3f46faa9cc1a1a4b891add97301ca930cd77d789ac5e1271f99'),
+            'uc123-child': ('uc123/001_wap1/child/body.bin','519ce2e7a7532c42e7653d146c438411091dccaeafd6e029a069b049475cb530'),
+            'cctv-home': ('cctv-wml/001_wap1/home/body.bin','86e8f7205f14f030c754c305d6cfa0a2a6784792f000816eda040f916ae4deef'),
+            '517ming-s60-home': ('517ming-s60/001_s60/home/body.bin','138946dc46ea189b058d41cedc4b684a9ab48cb7a958db434113a115a3ff3819'),
+            '517ming-s60-child': ('517ming-s60/001_s60/child/body.bin','0bcb8c9140e87f92489690aced907f82cd481a4b9489e5c94b4fce91c8e82a06'),
+          }
+          for name,(path,expected) in samples.items():
+              content=Path('.r8-input',path).read_bytes()
+              got=hashlib.sha256(content).hexdigest()
+              if got!=expected: raise SystemExit(f'FAIL: {name} SHA256 {got}')
+              print(f'OK: {name}; bytes={len(content)}; sha256={got}')
+          PY
+      - name: Build pinned independent native WML engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .r8-check/src
+          cat > .r8-check/Cargo.toml <<'TOML'
+          [package]
+          name = "wap_r8_offline_replay"
+          version = "0.1.0"
+          edition = "2021"
+          [dependencies]
+          wavenav_engine = { path = "../external/wap-labs/engine-wasm/engine", default-features = false }
+          TOML
+          cat > .r8-check/src/main.rs <<'RS'
+          use std::{env,fs};
+          use wavenav_engine::WmlEngine;
+          fn run(path:&str,url:&str)->Result<String,String>{
+              let raw=fs::read(path).map_err(|e|format!("read: {e}"))?;
+              let xml=String::from_utf8(raw).map_err(|e|format!("utf8: {e}"))?;
+              let mut engine=WmlEngine::new();
+              engine.load_deck_context(&xml,url,"text/vnd.wap.wml",None)
+                  .map_err(|e|format!("load: {e}"))?;
+              let card=engine.active_card_id().map_err(|e|format!("card: {e}"))?;
+              let frame=engine.render_frame().map_err(|e|format!("frame: {e:?}"))?;
+              if frame.rows.is_empty() || frame.viewport.content_rows==0 {
+                  return Err("empty frame".into());
+              }
+              Ok(format!("card-length={} frame-rows={} content-rows={}",
+                 card.chars().count(),frame.rows.len(),frame.viewport.content_rows))
+          }
+          fn main(){
+              let args:Vec<String>=env::args().skip(1).collect();
+              if args.is_empty() || args.len()%3!=0 {std::process::exit(2)}
+              let mut failed=0;
+              for item in args.chunks_exact(3){
+                  match run(&item[1],&item[2]){
+                      Ok(x)=>println!("PASS {} {}",item[0],x),
+                      Err(e)=>{failed+=1;eprintln!("FAIL {} {}",item[0],e.replace(['\n','\r'],' '));}
+                  }
+              }
+              if failed>0 {std::process::exit(1)}
+          }
+          RS
+          cargo build --release --manifest-path .r8-check/Cargo.toml
+      - name: Independently load and render seven original WML files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p r8-safe-output
+          .r8-check/target/release/wap_r8_offline_replay \
+            ee1234-home .r8-input/ee1234/001_wap1/home/body.bin http://wap.ee1234.com/ \
+            ee1234-child .r8-input/ee1234/001_wap1/child/body.bin http://wap.ee1234.com/dongzuo-p1.wml \
+            uc123-home .r8-input/uc123/001_wap1/home/body.bin http://wap.uc123.com/ \
+            uc123-child .r8-input/uc123/001_wap1/child/body.bin http://wap.uc123.com/s_3457/ \
+            cctv-home .r8-input/cctv-wml/001_wap1/home/body.bin http://www.cctv.com/wap/index.wml \
+            517ming-s60-home .r8-input/517ming-s60/001_s60/home/body.bin http://wap.517ming.com/ \
+            517ming-s60-child .r8-input/517ming-s60/001_s60/child/body.bin http://wap.517ming.com/helian-xing.wml \
+            | tee r8-safe-output/results.txt
+      - name: Upload non-sensitive outcomes only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-independent-${{ github.run_id }}
+          path: r8-safe-output/
+          if-no-files-found: warn
+          retention-days: 7
