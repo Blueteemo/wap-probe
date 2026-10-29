@@ -105,6 +105,17 @@ jobs:
           unset PYTHONPATH
           .release-venv/bin/python scripts/smoke_clean_install.py
 
+      - name: Install private clean-source fallback and check real CLI/MCP
+        run: |
+          set -eu
+          python scripts/build_clean_source_candidate.py --out "$RUNNER_TEMP/wap-probe-clean-candidate"
+          cd "$RUNNER_TEMP/wap-probe-clean-candidate"
+          python -m venv .candidate-venv
+          .candidate-venv/bin/python -m pip install -e .
+          export PATH="$PWD/.candidate-venv/bin:$PATH"
+          unset PYTHONPATH
+          .candidate-venv/bin/python scripts/smoke_clean_install.py
+
   macos-clean-install:
     name: macOS clean editable install (Python 3.12)
     runs-on: macos-15
