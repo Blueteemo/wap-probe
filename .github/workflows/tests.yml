@@ -115,6 +115,7 @@ jobs:
           export PATH="$PWD/.candidate-venv/bin:$PATH"
           unset PYTHONPATH
           .candidate-venv/bin/python scripts/smoke_clean_install.py
+          .candidate-venv/bin/python -m unittest discover -s tests -v
 
   macos-clean-install:
     name: macOS clean editable install (Python 3.12)
