@@ -5,7 +5,7 @@ import argparse
 from contextlib import contextmanager
 import hashlib
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import sys
 import tempfile
@@ -36,15 +36,25 @@ def frozen_r5():
     archive = Path(__file__).resolve().parents[2] / "vendor" / "r5" / ARCHIVE_NAME
     if hashlib.sha256(archive.read_bytes()).hexdigest() != ARCHIVE_SHA256:
         raise ValueError("Frozen R5 source checksum mismatch")
+    # R5 contains historical reports, captures and a nested review archive.
+    # Those are preserved in the ZIP, but the runtime only needs two modules.
+    members = (
+        "wap-probe-live-discovery-r5/probe/wap_probe.py",
+        "wap-probe-live-discovery-r5/probe/wap_wbxml.py",
+    )
     with tempfile.TemporaryDirectory(prefix="wap-agent-r5-") as tmp:
+        probe_dir = Path(tmp) / "probe"
+        probe_dir.mkdir()
         with zipfile.ZipFile(archive) as z:
-            for item in z.infolist():
-                name = item.filename
-                path = PurePosixPath(name)
-                if path.is_absolute() or ".." in path.parts or "\\" in name or ":" in name or len(name) > 512:
-                    raise ValueError("Unsafe frozen R5 archive entry")
-            z.extractall(tmp)
-        yield Path(tmp) / "wap-probe-live-discovery-r5" / "probe"
+            for member in members:
+                info = z.getinfo(member)
+                if info.is_dir() or not 0 < info.file_size <= 128_000:
+                    raise ValueError("Invalid frozen R5 parser module")
+                data = z.read(info)
+                if len(data) != info.file_size:
+                    raise ValueError("Incomplete frozen R5 parser module")
+                (probe_dir / member.rsplit("/", 1)[-1]).write_bytes(data)
+        yield probe_dir
 
 
 def _safe_xml_text(data: bytes, content_type: str) -> str | None:

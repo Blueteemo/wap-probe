@@ -10,6 +10,8 @@ Expected SHA-256:
 
 This is intentionally **unmodified** so the 2026-10-28 frozen source, binary WMLC fixtures, nested historical test archive, and 139 original test cases remain reproducible. The GitHub Actions job verifies SHA-256 before extracting into ignored `.r5_unpacked/`. Do not edit or silently regenerate the frozen ZIP.
 
+At runtime, `frozen_r5()` verifies the complete immutable R5 ZIP SHA-256 but extracts **only** `probe/wap_probe.py` and `probe/wap_wbxml.py` into an ephemeral user-space directory. Nested historical reviews, captured WML, logs and other archived research material are **not** unpacked for ordinary Agent reading. The original archive remains unchanged.
+
 The new `src/wap_probe/r5_adapter.py` directly imports the real R5 parser (`probe/wap_probe.py` / `probe/wap_wbxml.py`), analyzes previously captured bytes, and produces a normalized `r6-r5-export-v1` for R6 bridge. Links with R5's `requires_inputs` flag are excluded from automatic GET candidates.
 
 The tests under `tests/test_r5_adapter.py` run against the actual frozen R5 parser. `tests/test_r5_bridge_integration.py` feeds **synthetic, labeled** HTTP captures through R6 evidence gate, actual R5 parser, then R6 bridge. They are not proof of a live Chinese WML origin, nor native WSP/WDP or physical handset compatibility.

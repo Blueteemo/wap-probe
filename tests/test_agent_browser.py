@@ -7,6 +7,16 @@ from unittest.mock import patch
 from wap_probe import agent_browser as b
 
 class AgentBrowserTests(unittest.TestCase):
+
+    def test_frozen_r5_unpacks_only_required_parser_modules(self):
+        # Read-only runtime does not unpack historical website captures,
+        # nested review ZIPs, Finder metadata or unrelated R5 scripts.
+        with b.frozen_r5() as probe:
+            names = sorted(p.name for p in probe.iterdir())
+            self.assertEqual(names, ["wap_probe.py", "wap_wbxml.py"])
+            self.assertTrue(all(p.is_file() for p in probe.iterdir()))
+            self.assertFalse((probe.parent / "deepseek_review_original.zip").exists())
+
     def test_utf8(self):
         s=b'<wml><card><p>Hello World</p></card></wml>'
         self.assertIn("Hello World",b._safe_xml_text(s,"text/vnd.wap.wml"))
