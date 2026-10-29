@@ -84,3 +84,7 @@ Historical evidence: [live Agent smoke](https://github.com/Blueteemo/wap-probe/a
 [frozen parser provenance](docs/R5_SOURCE.md).
 
 This repository is **private** pending historical source/license review.
+
+## Live MCP stdio acceptance
+
+[One-shot run #40864597665](https://github.com/Blueteemo/wap-probe/actions/runs/40864597665) successfully tested the actual local MCP subprocess and JSON-RPC 2025-11-25 handshake, tools/list, `wap_open` (HTTP 200), `wap_follow` to `/0x541B.wml` (HTTP 200), and `wap_back` (offline). Text extraction returned 94 and 462 characters respectively. The smoke workflow was retired after verification; **regular CI remains offline-only**. The WMLC readable-text path is independently exercised against the pinned binary fixture in the offline unit suite.

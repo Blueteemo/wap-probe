@@ -136,3 +136,7 @@ separate transport research track requiring an authorized test gateway.
 **License:** pending verification of historical R5 source and bundled
 dependencies. The absence of a completed license is intentional; please do
 not redistribute the repository or frozen archive until reviewed.
+
+### Live MCP acceptance
+
+[The real MCP stdio smoke test](https://github.com/Blueteemo/wap-probe/actions/runs/40864597665) confirmed process initialization, tool discovery, and `wap_open → wap_follow → wap_back` against the public calligraphy WML pages (both GET responses HTTP 200). WMLC text extraction is verified separately with a frozen binary fixture in the offline suite. Normal CI remains offline-only.
