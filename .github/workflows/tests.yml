@@ -142,7 +142,7 @@ jobs:
     name: One-time private prepublication Git bundle
     # One-off archive handoff: download the resulting artifact into private Drive,
     # then remove this temporary job before any public visibility change.
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'backup: private prepublication Git bundle') }}
+    if: "${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'backup: private prepublication Git bundle') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
