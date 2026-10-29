@@ -277,6 +277,11 @@ def main(argv=None) -> int:
     p = sub.add_parser("card", help="Select a card in the current deck offline")
     p.add_argument("--session", type=Path, required=True)
     p.add_argument("--index", type=int, required=True)
+    p = sub.add_parser("form-plan", help="Safely preview one GET form request offline")
+    p.add_argument("--session", type=Path, required=True)
+    p.add_argument("--action", type=int, required=True)
+    p.add_argument("--values-file", type=Path, required=True,
+                   help="Local JSON object of non-secret form values")
     for command in ("read", "back"):
         sub.add_parser(command).add_argument("--session", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -291,6 +296,10 @@ def main(argv=None) -> int:
             result = read_page(args.session)
         elif args.command == "card":
             result = select_card(args.session, args.index)
+        elif args.command == "form-plan":
+            from wap_probe.form_plan import plan_current
+            supplied = json.loads(args.values_file.read_text(encoding="utf-8"))
+            result = plan_current(args.session, args.action, supplied)
         else:
             result = go_back(args.session)
         print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
