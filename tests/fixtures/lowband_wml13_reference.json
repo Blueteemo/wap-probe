@@ -1,0 +1,152 @@
+{
+  "provenance": {
+    "repo": "dills122/wap-labs",
+    "commit": "9cd7ab97dc6752fc1616feb3505a58603f6a45df",
+    "path": "transport-rust/tests/fixtures/transport/wbxml_wml13/conformance.json",
+    "source_blob_sha": "2d806d76878cd343e0b39781411b547f04f00644",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2026 Dylan Steele",
+    "usage": "Independently authored Lowband WBXML/WML 1.3 fixture expectations. Curated small subset; no Rust source vendored. Lowband expected XML/errors do not automatically imply frozen R5 support.",
+    "original_corpus_count": 42
+  },
+  "fixtures": [
+    {
+      "id": "binary-basic-deck",
+      "hex": "030a6a007fe755036d61696e0001600348656c6c6f00010101",
+      "expected_xml": "<wml><card id=\"main\" newcontext=\"false\" ordered=\"true\"><p align=\"left\">Hello</p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "literal-basic-deck",
+      "hex": "030a6a19776d6c0063617264006964006d61696e00700048656c6c6f004400c4040409830c0144118313010101",
+      "expected_xml": "<wml><card id=\"main\" newcontext=\"false\" ordered=\"true\"><p align=\"left\">Hello</p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "wml13-default-attributes",
+      "hex": "030a6a007f67602f2e010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\"><input type=\"text\"/><img vspace=\"0\" hspace=\"0\" align=\"bottom\"/></p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "numeric-entity-multibyte",
+      "hex": "030a6a007f6760028120010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\">&#160;</p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "attribute-token-fragments",
+      "hex": "030a6a007f679c4b036578616d706c650088037800010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><a href=\"http://example.org/x\"/></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "literal-attribute-token-fragments",
+      "hex": "030a6a07610068726566007f678400040203687474703a2f2f6578616d706c652e6f72672f7800010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><a href=\"http://example.org/x\"/></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "explicit-empty-attribute-string",
+      "hex": "030a6a007fa73603000101",
+      "expected_xml": "<wml><card title=\"\" newcontext=\"false\" ordered=\"true\"/></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "charset-us-ascii-inline-and-table",
+      "hex": "030a03067461626c65007f676003696e6c696e6520008300010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\">inline table</p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "charset-iso-8859-1-inline-and-table",
+      "hex": "030a0402e9007f676003e9008300010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\">éé</p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "charset-utf-8-inline-and-table",
+      "hex": "030a6a03c3a9007f676003c3a9008300010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\">éé</p></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "tag-and-attribute-application-token-spaces",
+      "hex": "030a6a007f676003780001ab60010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\">x</p><go enctype=\"application/x-www-form-urlencoded\" sendreferer=\"false\" method=\"get\"/></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "extension-switch-context-and-forms",
+      "hex": "030a6a0575736572007f676000004075736572008000019c4a0000417573657200010101",
+      "expected_xml": "<wml><card newcontext=\"false\" ordered=\"true\"><p align=\"left\">$(user:escape)$(user:escape)</p><a href=\"$(user:unesc)\"/></card></wml>",
+      "expected_error": null
+    },
+    {
+      "id": "unsupported-charset-is-explicit",
+      "hex": "030a8775003f",
+      "expected_xml": null,
+      "expected_error": "unsupported charset MIBenum 1013"
+    },
+    {
+      "id": "unknown-charset-is-explicit",
+      "hex": "030a00003f",
+      "expected_xml": null,
+      "expected_error": "charset MIBenum 0 is unknown"
+    },
+    {
+      "id": "malformed-unterminated-utf8-string",
+      "hex": "030a6a007f67600378",
+      "expected_xml": null,
+      "expected_error": "unterminated inline content string"
+    },
+    {
+      "id": "malformed-truncated-public-identifier",
+      "hex": "0380",
+      "expected_xml": null,
+      "expected_error": "truncated public identifier"
+    },
+    {
+      "id": "malformed-truncated-charset",
+      "hex": "030a",
+      "expected_xml": null,
+      "expected_error": "truncated charset"
+    },
+    {
+      "id": "malformed-truncated-string-table",
+      "hex": "030a6a056100",
+      "expected_xml": null,
+      "expected_error": "truncated string table"
+    },
+    {
+      "id": "malformed-literal-offset",
+      "hex": "030a6a0278000402",
+      "expected_xml": null,
+      "expected_error": "string-table offset 2 is outside"
+    },
+    {
+      "id": "unassigned-tag-code-page-one",
+      "hex": "030a6a0000013f",
+      "expected_xml": null,
+      "expected_error": "unassigned WML tag code page 1"
+    },
+    {
+      "id": "reserved-tag-code-page-255",
+      "hex": "030a6a0000ff3f",
+      "expected_xml": null,
+      "expected_error": "implementation-specific WML tag code page 255 is not registered"
+    },
+    {
+      "id": "malformed-truncated-opaque",
+      "hex": "030a6a007fc303aa",
+      "expected_xml": null,
+      "expected_error": "truncated OPAQUE payload"
+    },
+    {
+      "id": "malformed-attribute-value-literal-tag-token",
+      "hex": "030a6a00bf55840001",
+      "expected_xml": null,
+      "expected_error": "invalid in an attribute value"
+    }
+  ]
+}

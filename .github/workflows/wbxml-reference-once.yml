@@ -1,0 +1,33 @@
+name: One-shot independent WBXML reference classification
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wbxml-reference-once.yml'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: src
+      R5_PROBE_DIR: .r5_unpacked/wap-probe-live-discovery-r5/probe
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify frozen R5 and unpack
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib, zipfile
+          file=pathlib.Path('vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip')
+          assert hashlib.sha256(file.read_bytes()).hexdigest() == 'cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa'
+          with zipfile.ZipFile(file) as z:
+              z.extractall('.r5_unpacked')
+          PY
+      - name: Classify pinned independent Lowband fixture expectations
+        run: python scripts/inspect_lowband_wbxml.py
