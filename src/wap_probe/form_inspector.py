@@ -149,6 +149,19 @@ def inspect_forms(raw: bytes, content_type: str = "text/vnd.wap.wml", *,
             "field_count": count_fields, "action_count": count_actions,
             "truncated": count_fields > MAX_FIELDS or count_actions > MAX_ACTIONS,
             "read_only": True,
+            **({"_do_navigation": [
+                {"href": go.get("href"), "method": "GET"}
+                for do in card.iter() if _tag(do) == "do"
+                and do.get("type", "").lower() in ("accept", "options", "help")
+                and not any(_tag(n) in ("input", "select", "setvar", "onevent", "timer")
+                            for n in card.iter())
+                for go in do if _tag(go) == "go"
+                and go.get("method", "get").lower() == "get"
+                and set(go.attrib).issubset({"href", "method"})
+                and len(go) == 0 and isinstance(go.get("href"), str)
+                and go.get("href") and "$" not in go.get("href")
+                and "?" not in go.get("href") and "#" not in go.get("href")
+            ][:16]} if include_action_hrefs else {}),
             **({"_action_hrefs": [
                 node.get("href") for node in card.iter()
                 if _tag(node) == "go" and isinstance(node.get("href"), str)

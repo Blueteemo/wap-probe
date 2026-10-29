@@ -82,7 +82,7 @@ def page_view(page_dir: Path, *, card_index: int = 0) -> dict:
         "mime": metadata["content_type"].split(";", 1)[0].strip().lower(),
         "bytes": metadata["body_bytes"], "sha256": metadata["body_sha256"],
         "capture_status": evidence["status"], "ok": False,
-        "text": None, "links": [], "card_links": [], "cards": [],
+        "text": None, "links": [], "card_links": [], "do_links": [], "cards": [],
     }
     if evidence["status"] not in VALID_STATUSES:
         return result
@@ -119,6 +119,14 @@ def page_view(page_dir: Path, *, card_index: int = 0) -> dict:
             result["links"].append({
                 "index": len(result["links"]), "url": url,
                 "method": "GET", "card_id": cards[card_index]["id"],
+            })
+    for action in cards[card_index].get("do_navigation", []):
+        target, reason = evaluate_link(metadata["url"], action)
+        if target is not None and len(result["do_links"]) < 16:
+            result["do_links"].append({
+                "index": len(result["do_links"]), "url": target,
+                "source": "do_go", "explicit_execute_required": True,
+                "method": "GET", "submitted_fields": 0,
             })
     return result
 
@@ -225,6 +233,27 @@ def follow_link(root: Path, index: int, *, capture_page=_capture_page) -> dict:
     return _append_page(root, state, page)
 
 
+def follow_do(root: Path, index: int, *, capture_page=_capture_page) -> dict:
+    """Explicitly follow one verified no-input <do><go> GET, never a form."""
+    root = Path(root)
+    state = _load_session(root)
+    if len(state["pages"]) >= MAX_PAGES:
+        raise ValueError("Session page limit reached")
+    current = _view(root, state)
+    if not current["ok"]:
+        raise ValueError("Current page is not verified WML")
+    if type(index) is not int or not 0 <= index < len(current["do_links"]):
+        raise ValueError("Invalid do/go index")
+    link = current["do_links"][index]
+    target = link["url"]
+    checked, reason = evaluate_link(current["url"], {"href": target, "method": "GET"})
+    if reason != "OK" or checked != target:
+        raise ValueError("Unsafe do/go navigation target")
+    page = root / "pages" / f"page-{len(state['pages'])+1:04d}"
+    capture_page(target, state["profile"], page)
+    return _append_page(root, state, page)
+
+
 def read_page(root: Path) -> dict:
     root = Path(root)
     return _view(root, _load_session(root))
@@ -282,16 +311,22 @@ def main(argv=None) -> int:
     p.add_argument("--action", type=int, required=True)
     p.add_argument("--values-file", type=Path, required=True,
                    help="Local JSON object of non-secret form values")
+    p = sub.add_parser("go", help="Opt-in one no-input WML do/go GET")
+    p.add_argument("--session", type=Path, required=True)
+    p.add_argument("--index", type=int, required=True)
+    p.add_argument("--execute", action="store_true", help="Required for network GET")
     for command in ("read", "back"):
         sub.add_parser(command).add_argument("--session", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command in ("open", "follow") and not args.execute:
+        if args.command in ("open", "follow", "go") and not args.execute:
             raise ValueError("Network opt-in required: --execute")
         if args.command == "open":
             result = open_page(args.url, args.out, args.profile)
         elif args.command == "follow":
             result = follow_link(args.session, args.link)
+        elif args.command == "go":
+            result = follow_do(args.session, args.index)
         elif args.command == "read":
             result = read_page(args.session)
         elif args.command == "card":

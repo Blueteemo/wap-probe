@@ -81,8 +81,19 @@ def read_r5_export(export_path, capture_dir):
                 if (not isinstance(action, dict)
                         or action.get("submission_available") is not False):
                     raise ValueError("Invalid R5 form action")
+        do_raw = card.get("do_navigation", [])
+        if not isinstance(do_raw, list) or len(do_raw) > 16:
+            raise ValueError("Invalid R5 no-input do/go collection")
+        validated_do = []
+        for action in do_raw:
+            if (not isinstance(action, dict) or not isinstance(action.get("href"), str)
+                    or not 0 < len(action["href"]) <= 2048
+                    or action.get("method") != "GET"):
+                raise ValueError("Invalid R5 do/go action")
+            validated_do.append({"href": action["href"], "method": "GET"})
         validated_cards.append({"id": card.get("id"), "links": parsed_links,
-                                "text": card_text, "form_preview": form})
+                                "text": card_text, "form_preview": form,
+                                "do_navigation": validated_do})
     return {"source_sha256": actual_sha, "card_count": len(cards),
             "cards": validated_cards, "links": validated_cards[0]["links"]}
 

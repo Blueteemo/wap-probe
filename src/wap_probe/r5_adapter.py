@@ -79,6 +79,7 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
         parsed_forms = []
 
     go_targets = [set(item.pop("_action_hrefs", [])) for item in parsed_forms]
+    do_navigation = [item.pop("_do_navigation", []) for item in parsed_forms]
     cards = []
     for card_index, card in enumerate(analysis["cards"]):
         links = []
@@ -103,7 +104,8 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
             raise ValueError("R5 card text is not a string")
         cards.append({"id": card.get("id"), "links": links,
                       "text": text[:12000],
-                      "form_preview": parsed_forms[card_index] if parsed_forms else None})
+                      "form_preview": parsed_forms[card_index] if parsed_forms else None,
+                      "do_navigation": do_navigation[card_index] if do_navigation else []})
 
     return {
         "schema": R5_SCHEMA,

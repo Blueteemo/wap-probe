@@ -53,6 +53,30 @@ def _auth_destination(path, query):
 
 
 
+# Exclude scripts, downloads, and obvious state-changing GET actions.
+NON_DOCUMENT_SUFFIXES = (
+    ".wmls", ".wmlsc", ".js", ".css", ".jar", ".jad", ".sis", ".sisx",
+    ".zip", ".rar", ".7z", ".apk", ".exe", ".cab",
+    ".mp3", ".mid", ".midi", ".wav", ".mp4", ".3gp",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg",
+)
+MUTATION_STEMS = {"delete", "remove", "destroy", "save", "update", "submit",
+                  "send", "pay", "payment", "checkout", "purchase", "cancel",
+                  "unsubscribe", "withdraw", "transfer", "reset", "confirm",
+                  "activate", "deactivate", "enable", "disable", "execute"}
+
+def _mutation_destination(path, query):
+    for segment in _decoded_lower(path).split("/"):
+        stem = segment.split(".", 1)[0]
+        if segment in MUTATION_STEMS or stem in MUTATION_STEMS:
+            return True
+    for key, value in parse_qsl(query, keep_blank_values=True, max_num_fields=64):
+        if (_decoded_lower(key) in ("action", "mode", "type", "op", "operation", "cmd", "do")
+                and _decoded_lower(value) in MUTATION_STEMS):
+            return True
+    return False
+
+
 def validate_preferred_path(path):
     """Conservative literal path used ONLY to match a real parsed R5 link."""
     if not isinstance(path, str) or not re.fullmatch(
@@ -115,6 +139,10 @@ def evaluate_link(home_url, link):
         p = urlsplit(target)
         if _auth_destination(p.path, p.query):
             return None, "AUTH_FLOW"
+        if _mutation_destination(p.path, p.query):
+            return None, "MUTATION_FLOW"
+        if _decoded_lower(p.path).endswith(NON_DOCUMENT_SUFFIXES):
+            return None, "NON_WML_RESOURCE"
         normalized = urlunsplit((p.scheme, p.hostname.lower(), p.path or "/", p.query, ""))
         home = urlsplit(urldefrag(home_url)[0])
         home_normalized = urlunsplit(
