@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from wap_probe.bridge import read_r5_export
+from wap_probe.errors import safe_error
 from wap_probe.collector import capture, validate_url, PROFILES
 from wap_probe.evidence_gate import verify_folder
 from wap_probe.navigation import evaluate_link
@@ -385,8 +386,7 @@ def main(argv=None) -> int:
         print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
         return 0 if result["ok"] else 1
     except (ValueError, TypeError, KeyError, OSError, json.JSONDecodeError) as exc:
-        print(json.dumps({"ok": False, "error": type(exc).__name__,
-                          "message": str(exc)[:200]}, ensure_ascii=False))
+        print(json.dumps({"ok": False, **safe_error(exc)}, ensure_ascii=False))
         return 2
 
 

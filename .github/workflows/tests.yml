@@ -52,3 +52,29 @@ jobs:
             (cd ".r5_unpacked/wap-probe-live-discovery-r5/$component" \
               && python -m unittest discover -p 'test_*.py' -q)
           done
+
+  clean-install:
+    name: Clean editable install (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: offline
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Create ordinary-user virtualenv and install entrypoints
+        run: |
+          python -m venv .smoke-venv
+          .smoke-venv/bin/python -m pip install -e .
+      - name: Test installed CLI and MCP with synthetic offline WML/WMLC evidence
+        run: |
+          export PATH="$PWD/.smoke-venv/bin:$PATH"
+          unset PYTHONPATH
+          .smoke-venv/bin/python scripts/smoke_clean_install.py
