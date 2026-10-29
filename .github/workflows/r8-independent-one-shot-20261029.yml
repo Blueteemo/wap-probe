@@ -89,7 +89,7 @@ jobs:
               for item in args.chunks_exact(3){
                   match run(&item[1],&item[2]){
                       Ok(x)=>println!("PASS {} {}",item[0],x),
-                      Err(e)=>{failed+=1;eprintln!("FAIL {} {}",item[0],e.replace(['\n','\r'],' '));}
+                      Err(e)=>{failed+=1;eprintln!("FAIL {} {}",item[0],e.replace(['\n','\r']," "));}
                   }
               }
               if failed>0 {std::process::exit(1)}
