@@ -177,3 +177,62 @@ cross-check and final human review. Physical Nokia browser/transport is
 also untested. Next priority is cross-validate one shufaji and one
 517ming capture using a fixed WAP Labs revision, then finalize R7 and
 document HTTP-only feasibility without stretching the investigation.
+
+## R7 independent WaveNav engine cross-check — 2026-10-29
+
+This is a **true second parser/rendering implementation**, not another
+test using frozen R5. In
+[GitHub Actions run #40847596595](https://github.com/Blueteemo/wap-probe/actions/runs/40847596595),
+the runner checked out public `dills122/wap-labs` at immutable Git SHA
+`9cd7ab97dc6752fc1616feb3505a58603f6a45df`, compiled its native
+`wavenav_engine` v0.3.0 with default WASM bindings disabled, and called
+`WmlEngine::load_deck_context`, `active_card_id`, and `render_frame`
+on **unchanged** six real source `body.bin` files.
+
+No live target website requests were sent in R7. R6 originals were downloaded
+from **private** Actions artifacts #12885087285 (run 40846429748) and
+#12884693376 (run 40846746719), whose filenames and expected SHA-256
+values are fixed in the R7 job log. Every input hash was reverified, so
+this is not a synthetic fixture substitution.
+
+| Unchanged WML capture | Native WaveNav load | Card ID | Rendered frame rows | Content rows |
+| --- | --- | --- | ---: | ---: |
+| shufaji Nokia, home | PASS | 6 chars | 14 | 32 |
+| shufaji Nokia, child `/0x541B.wml` | PASS | 6 chars | 9 | 195 |
+| shufaji S60, home | PASS | 6 chars | 14 | 32 |
+| shufaji S60, child `/0x541B.wml` | PASS | 6 chars | 9 | 195 |
+| 517ming Nokia, home | PASS | 6 chars | 14 | 52 |
+| 517ming Nokia, child `/helian-xing.wml` | PASS | 6 chars | 11 | 30 |
+
+**Result: 6/6 byte hashes + 6/6 independent WaveNav WML load/render PASS.**
+This strongly upgrades the two-domain, two-page **HTTP WML evidence**.
+The WML home→child href relationship and real HTTP GETs were independently
+recorded in R6. The R7 engine replay loaded each page independently; it
+did **not** synthesize a handset keypress or issue a WAP network navigation.
+
+**Limits, explicitly not tested:**
+- The pinned WaveNav implementation is pre-alpha/pre-conformance; it is
+  independent and valuable evidence, not a WML 1.1 DTD or full Class C
+  conformance certificate.
+- No original Nokia/S60 hardware browser was tested.
+- No native WSP/WDP or authenticated carrier WAP gateway was tested.
+- R7 did not re-run a separate Lowband HTTP transport session against the
+  live origins (it checked historical direct-origin curl capture bytes).
+- HTTP responses are confirmed for the two domains; HTTPS and old TLS
+  compatibility are not inferred from this HTTP-only evidence.
+- The original `A_origin` and `A_navigation` automation fields stay
+  `PENDING`, rather than being silently rewritten as PASS.
+
+**Research judgment:** classify `wap.shufaji.com` and
+`wap.517ming.com` as **confirmed live Chinese HTTP WML two-page samples,
+cross-validated by two parser implementations**; track physical-device/
+WSP compatibility separately as `UNTESTED`. A public claim that a 2000s
+Nokia can browse either site without a suitable WAP gateway would be
+unsubstantiated.
+
+**Operational cleanup:** the temporary R7 workflow and the older 2026-10-29
+one-shot public survey workflow have been retired, leaving only the stable
+offline test and explicit manual sample workflows. R5 archive and production
+pipeline are unchanged. Sanitized R7 engine results artifact
+`r7-wavenav-results-40847596595` (artifact ID 12884534955) is retained
+for 7 days; the persistent CI log and this report preserve the outcome.

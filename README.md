@@ -89,6 +89,20 @@ PYTHONPATH=src python3 -m wap_probe.pipeline --url http://tx.com.cn/ \
 原始私有工件仅保留三天，**不可把 Set-Cookie 等原始响应头提交到仓库**。
 各站首页与二级页的原始 WML 都通过了冻结 R5 及独立 XML 结构解析，但正式 A-origin/A-navigation 仍标记 PENDING，等待独立 WAP 引擎交叉复核和人工签署。
 
+
+### R7 独立引擎交叉复核（2026-10-29）
+
+使用 **固定提交 `9cd7ab97dc6752fc1616feb3505a58603f6a45df` 的 WAP Labs／WaveNav Rust 引擎**，对既有 R6 GitHub Actions 工件中的 **6 份原始 WML 正文字节**校验 SHA-256 后进行独立加载、卡片识别及渲染。
+
+- 书法集 `http://wap.shufaji.com/`：Nokia 7110 与 S60v3 画像下的首页和“君”字二级页，共 **4/4 通过**；
+- 我要起名网 `http://wap.517ming.com/`：Nokia 7110 画像下的首页和“赫连”姓详情页，共 **2/2 通过**；
+- 独立 WaveNav 的 **6/6 加载与渲染均成功**，原始数据 SHA-256 **6/6 一致**；
+- 两站已有真实 HTTP 200 + WML 首页与同源子页 GET 记录、冻结 R5 解析记录和本轮独立 WaveNav 记录。可标注为**国内 HTTP WML 双页证据已确认**，但尚非实体设备／原生 WSP/WDP 验收。
+
+独立复核：[Actions #40847596595](https://github.com/Blueteemo/wap-probe/actions/runs/40847596595)；完整验收范围及每页哈希见 [R6/R7 采集说明](docs/LIVE_CAPTURE.md)。这次 **未对目标网站发出新请求**，只重放原有私有证据。
+
+**验收口径：** `A-origin` / `A-navigation` 机器状态仍保留 `PENDING`，直到另外补足所需的传输/设备和最终签署条件；不能把 WaveNav 的离线解析成功外推成 Nokia 实机上网或 WSP/WDP 通过。
+
 ### 真实 HTTPS 样本的导航排除策略
 
 2026-10-28 首次 HTTPS 采集得到 `tx.com.cn` 首页 HTTP 200、WML 1.1、6,943 字节并由冻结 R5 解析出一张卡片。首页第一条 `/in/fltin_t.jsp?...type=login` 为登录/注册入口，返回 HTTP 302；它不是公开二级内容的有效验收样本。R6 现在排除明显的登录/注册 URL 路径和操作参数，优先尝试首页后续公开 GET 链接。这不保证后续链接一定返回 WML，二级响应仍需独立验证。访问行为仍限制为 GET、不发送登录表单、不跟随重定向。
