@@ -96,3 +96,5 @@ MCP Agent 调用 `wap_import_wsp({})` 获得 `session_id` 后，使用 `wap_read
 ## Source archive release packaging preflight (2026-10-30)
 
 An additional job in the existing `tests.yml` workflow creates a plain `git archive --format=tar HEAD` into a new directory, runs a clean Python 3.12 editable install **from that extracted archive rather than the Git checkout**, and executes the three CLI entrypoints plus the fully offline synthetic HTTP/WML, frozen R5 WMLC and MCP stdio smoke script. This explicitly checks whether a source-only release artifact containing `vendor/r5/` is self-consistent. **This job does not publish a release and does not establish license permission to redistribute the archive.** It does not test a standalone wheel, PyPI installation, the user's Mac or binary packages.
+
+**验收结果补充（2026-10-30）：** [Run #40923216137](https://github.com/Blueteemo/wap-probe/actions/runs/40923216137) 中新增的 Source archive install Job 已通过，整个工作流 6/6 Job 成功；现有代码测试增加至 252 项，加上冻结 R5 的 139 项，共 391 项通过。该结果不意味着已可合法公开分发第三方历史取证资料。
