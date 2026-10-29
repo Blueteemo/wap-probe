@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from pathlib import Path
 import secrets
 import socket
 import sys
@@ -174,7 +175,7 @@ def decode_reply(packet: bytes, transaction_id: int) -> WspReply:
         charset=charset, extra_header_bytes=length - consumed,
     )
 
-def live_probe(*, allow_network: bool, execute: bool) -> dict:
+def live_probe(*, allow_network: bool, execute: bool, evidence_out=None) -> dict:
     """One bounded UDP GET to WAP Labs' documented anonymous lab resource."""
     if not (allow_network and execute):
         raise WspProtocolError("Two explicit network opt-ins required")
@@ -199,6 +200,9 @@ def live_probe(*, allow_network: bool, execute: bool) -> dict:
     with frozen_r5() as unpacked:
         mime = parsed.content_type + ("; charset=" + parsed.charset if parsed.charset else "")
         exported = parse_r5(parsed.body, mime, probe_dir=unpacked)
+    if evidence_out is not None:
+        from wap_probe.wsp_evidence import write_record
+        write_record(evidence_out, wire, reply)
     return {
         "ok": True, "transport": "connectionless-wsp-over-udp",
         "source": "public-first-party-wap-labs-interop",
@@ -218,11 +222,14 @@ def main(argv=None) -> int:
                    help="Only the pinned public WAP Labs interop homepage")
     p.add_argument("--allow-network", action="store_true")
     p.add_argument("--execute", action="store_true")
+    p.add_argument("--evidence-out", type=Path,
+                   help="Write hash-bound original WSP GET and Reply evidence (no overwrite)")
     args = p.parse_args(argv)
     try:
         if not args.lab:
             raise WspProtocolError("Only --lab is implemented")
-        result = live_probe(allow_network=args.allow_network, execute=args.execute)
+        result = live_probe(allow_network=args.allow_network, execute=args.execute,
+                            evidence_out=args.evidence_out)
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except (WspProtocolError, OSError, ValueError, TimeoutError) as exc:

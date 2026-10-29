@@ -192,6 +192,8 @@ def plan_current(root: Path, action_index: int, values: object) -> dict:
     values = _validate_values(values)
     root = Path(root)
     state = _load_session(root)
+    if state.get("transport") == "wsp-offline":
+        raise ValueError("Offline WSP evidence does not support form planning")
     current = _view(root, state)  # validates capture + source-bound R5 export
     preview = current.get("form_preview")
     if not current.get("ok") or not isinstance(preview, dict):

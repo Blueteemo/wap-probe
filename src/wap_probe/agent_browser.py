@@ -75,18 +75,46 @@ def _safe_xml_text(data: bytes, content_type: str) -> str | None:
 def page_view(page_dir: Path, *, card_index: int = 0) -> dict:
     """Verify recorded bytes; expose only the selected WML card and its links."""
     page_dir = Path(page_dir)
-    evidence = verify_folder(page_dir)
-    metadata = json.loads((page_dir / "metadata.json").read_text(encoding="utf-8"))
-    result = {
-        "url": metadata["url"], "http_status": metadata["http_status"],
-        "mime": metadata["content_type"].split(";", 1)[0].strip().lower(),
-        "bytes": metadata["body_bytes"], "sha256": metadata["body_sha256"],
-        "capture_status": evidence["status"], "ok": False,
-        "text": None, "links": [], "card_links": [], "do_links": [], "cards": [],
-    }
-    if evidence["status"] not in VALID_STATUSES:
-        return result
-    record = read_r5_export(page_dir / "r5_export.json", page_dir)
+    is_wsp = (page_dir / "wsp_manifest.json").exists()
+    if is_wsp:
+        from wap_probe.wsp_evidence import verify_imported_page
+        parsed = verify_imported_page(page_dir)
+        # Local R5 exports are not signed: reject tampered display text by
+        # re-running frozen R5 against the exact WSP reply body at each read.
+        from wap_probe.r5_adapter import parse_r5
+        from wap_probe.bridge import load_json
+        mime = parsed.content_type + (
+            "; charset=" + parsed.charset if parsed.charset else "")
+        with frozen_r5() as probe:
+            rebuilt = parse_r5(parsed.body, mime, probe_dir=probe)
+        if load_json(page_dir / "r5_export.json") != rebuilt:
+            raise ValueError("Imported WSP R5 export no longer matches source")
+        record = read_r5_export(page_dir / "r5_export.json", page_dir)
+        result = {
+            "url": "http://interop.wap.shrimpworks.dev/",
+            "http_status": None, "wsp_status": parsed.status,
+            "transport": "wsp-offline",
+            "mime": parsed.content_type, "bytes": len(parsed.body),
+            "sha256": hashlib.sha256(parsed.body).hexdigest(),
+            "capture_status": "WSP_OFFLINE_VERIFIED",
+            "source_authenticated": False, "ok": False,
+            "text": None, "links": [], "card_links": [], "do_links": [],
+            "cards": [],
+        }
+    else:
+        evidence = verify_folder(page_dir)
+        metadata = json.loads((page_dir / "metadata.json").read_text(encoding="utf-8"))
+        result = {
+            "url": metadata["url"], "http_status": metadata["http_status"],
+            "mime": metadata["content_type"].split(";", 1)[0].strip().lower(),
+            "bytes": metadata["body_bytes"], "sha256": metadata["body_sha256"],
+            "capture_status": evidence["status"], "ok": False,
+            "text": None, "links": [], "card_links": [], "do_links": [],
+            "cards": [],
+        }
+        if evidence["status"] not in VALID_STATUSES:
+            return result
+        record = read_r5_export(page_dir / "r5_export.json", page_dir)
     if type(card_index) is not int or not 0 <= card_index < record["card_count"]:
         raise ValueError("Invalid card index")
     result["ok"] = True
@@ -114,13 +142,16 @@ def page_view(page_dir: Path, *, card_index: int = 0) -> dict:
                     "id": href[1:], "target_index": ids[href[1:]],
                 })
             continue
+        if is_wsp:
+            # Offline imported WSP evidence cannot initiate any follow-up GET.
+            continue
         url, reason = evaluate_link(metadata["url"], link)
         if url is not None and len(result["links"]) < MAX_LINKS:
             result["links"].append({
                 "index": len(result["links"]), "url": url,
                 "method": "GET", "card_id": cards[card_index]["id"],
             })
-    for action in cards[card_index].get("do_navigation", []):
+    for action in ([] if is_wsp else cards[card_index].get("do_navigation", [])):
         target, reason = evaluate_link(metadata["url"], action)
         if target is not None and len(result["do_links"]) < 16:
             result["do_links"].append({
@@ -142,7 +173,11 @@ def _load_session(root: Path) -> dict:
             or not 1 <= len(state["pages"]) <= MAX_PAGES
             or type(state.get("cursor")) is not int
             or not 0 <= state["cursor"] < len(state["pages"])
-            or state.get("profile") not in PROFILES):
+            or state.get("profile") not in PROFILES
+            or state.get("transport") not in (None, "wsp-offline")
+            or (state.get("transport") == "wsp-offline" and (
+                len(state["pages"]) != 1 or state["cursor"] != 0
+                or state.get("profile") != "wmlc"))):
         raise ValueError("Invalid browser session")
     positions = state.setdefault("card_positions", [0] * len(state["pages"]))
     history = state.setdefault("card_history", [])
@@ -217,6 +252,8 @@ def follow_link(root: Path, index: int, *, capture_page=_capture_page) -> dict:
     """Fetch exactly one safe same-origin GET selected from parsed R5 links."""
     root = Path(root)
     state = _load_session(root)
+    if state.get("transport") == "wsp-offline":
+        raise ValueError("Imported WSP evidence cannot follow network links")
     if len(state["pages"]) >= MAX_PAGES:
         raise ValueError("Session page limit reached")
     current = _view(root, state)
@@ -237,6 +274,8 @@ def follow_do(root: Path, index: int, *, capture_page=_capture_page) -> dict:
     """Explicitly follow one verified no-input <do><go> GET, never a form."""
     root = Path(root)
     state = _load_session(root)
+    if state.get("transport") == "wsp-offline":
+        raise ValueError("Imported WSP evidence cannot follow network links")
     if len(state["pages"]) >= MAX_PAGES:
         raise ValueError("Session page limit reached")
     current = _view(root, state)
@@ -299,6 +338,9 @@ def main(argv=None) -> int:
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--profile", choices=tuple(PROFILES), default="wap1")
     p.add_argument("--execute", action="store_true", help="Required to fetch")
+    p = sub.add_parser("import-wsp", help="Offline import of verified lab WSP evidence")
+    p.add_argument("--evidence", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True)
     p = sub.add_parser("follow", help="Follow one same-origin public GET link")
     p.add_argument("--session", type=Path, required=True)
     p.add_argument("--link", type=int, required=True)
@@ -323,6 +365,9 @@ def main(argv=None) -> int:
             raise ValueError("Network opt-in required: --execute")
         if args.command == "open":
             result = open_page(args.url, args.out, args.profile)
+        elif args.command == "import-wsp":
+            from wap_probe.wsp_evidence import import_record
+            result = import_record(args.evidence, args.out)
         elif args.command == "follow":
             result = follow_link(args.session, args.link)
         elif args.command == "go":
