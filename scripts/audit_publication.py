@@ -46,7 +46,7 @@ def _scan_bytes(data: bytes, label: str, findings: set[tuple[str, str]]):
 
 def _scan_archive(data: bytes, base: str, *, depth: int,
                   license_paths: set[str], candidate_sources: list[int],
-                  findings: set[tuple[str, str]]):
+                  findings: set[tuple[str, str]], inventory: list[dict]):
     if depth > 2:
         return
     with zipfile.ZipFile(io.BytesIO(data)) as z:
@@ -54,7 +54,8 @@ def _scan_archive(data: bytes, base: str, *, depth: int,
             if member.is_dir() or member.file_size > 3_000_000:
                 continue
             name = member.filename
-            candidate_sources[0] += int(name.endswith((".py", ".js", ".c", ".h", ".rs", ".java")))
+            is_source = name.lower().endswith((".py", ".js", ".c", ".h", ".rs", ".java"))
+            candidate_sources[0] += int(is_source)
             base_name = name.replace("\\", "/").rsplit("/", 1)[-1].lower()
             if base_name in LICENSE_FILENAMES or base_name.startswith("license."):
                 license_paths.add(base + ":" + name)
@@ -62,12 +63,35 @@ def _scan_archive(data: bytes, base: str, *, depth: int,
                 continue
             raw = z.read(member)
             _scan_bytes(raw, base + ":" + _safe_label(name), findings)
+            if is_source:
+                parts = name.replace(chr(92), "/").split("/")
+                metadata = "__MACOSX" in parts or parts[-1].startswith("._")
+                references = {
+                    "android-kxml": rb"(?i)(?:android.*kxml|kxml.*android|Wml[.]java)",
+                    "libwbxml": rb"(?i)libwbxml",
+                    "wap-labs": rb"(?i)(?:wap[-_]labs|wapcurl)",
+                    "w3c-oma": rb"(?i)(?:W3C|OMA|WBXML specification)",
+                    "lowband": rb"(?i)lowband",
+                }
+                inventory.append({
+                    "path": base + ":" + name,
+                    "type": "macos-metadata" if metadata else (
+                        "nested-research-snapshot" if depth else "r5-primary"),
+                    "size": len(raw),
+                    "sha256_12": hashlib.sha256(raw).hexdigest()[:12],
+                    "explicit_copyright_or_spdx": (
+                        bool(re.search(rb"(?i)(?:SPDX-License-Identifier|copyright)", raw))
+                        if not metadata else False),
+                    "reference_mentions_not_license_grants": (
+                        [tag for tag, pattern in references.items()
+                         if re.search(pattern, raw)] if not metadata else []),
+                })
             if name.lower().endswith(".zip"):
                 try:
                     _scan_archive(raw, base + ":" + _safe_label(name),
                                   depth=depth + 1, license_paths=license_paths,
                                   candidate_sources=candidate_sources,
-                                  findings=findings)
+                                  findings=findings, inventory=inventory)
                 except zipfile.BadZipFile:
                     pass
 
@@ -80,22 +104,32 @@ def main() -> None:
     source_count = [0]
     license_paths: set[str] = set()
     suspicious: set[tuple[str, str]] = set()
+    inventory: list[dict] = []
     _scan_archive(ARCHIVE.read_bytes(), "frozen-r5.zip", depth=0,
                   license_paths=license_paths, candidate_sources=source_count,
-                  findings=suspicious)
+                  findings=suspicious, inventory=inventory)
     objects = _git("rev-list", "--objects", "--all").decode("utf-8", "replace").splitlines()
     blobs = 0
+    archive_blobs = 0
     archived_paths = set()
     for line in objects:
         sha, _, path = line.partition(" ")
         if not path:
             continue
-        if path.endswith(".zip"):
-            archived_paths.add(_safe_label(path))
-        if not path.endswith((".py", ".md", ".txt", ".json", ".yml", ".yaml",
-                              ".toml", ".cfg", ".ini", ".sh", ".env")):
-            continue
         size = int(_git("cat-file", "-s", sha))
+        if path.lower().endswith(".zip"):
+            archived_paths.add(_safe_label(path))
+            if size <= 5_000_000:
+                archive_blobs += 1
+                raw = _git("cat-file", "-p", sha)
+                try:
+                    _scan_archive(raw, "git-history-zip:" + _safe_label(path),
+                                  depth=0, license_paths=set(),
+                                  candidate_sources=[0], findings=suspicious,
+                                  inventory=[])
+                except zipfile.BadZipFile:
+                    _scan_bytes(raw, "git-history-zip:" + _safe_label(path), suspicious)
+            continue
         if size > 500_000:
             continue
         blobs += 1
@@ -110,6 +144,13 @@ def main() -> None:
         "r5_internal_license_filenames": sorted(license_paths)[:30],
         "historical_archive_basenames": sorted(archived_paths)[:30],
         "history_text_blobs_scanned": blobs,
+        "history_zip_blobs_scanned": archive_blobs,
+        "r5_real_source_files_including_historical_copies": sum(
+            p["type"] != "macos-metadata" for p in inventory),
+        "r5_macos_metadata_false_source_candidates": sum(
+            p["type"] == "macos-metadata" for p in inventory),
+        "r5_unique_source_hashes": len({
+            p["sha256_12"] for p in inventory if p["type"] != "macos-metadata"}),
         "potential_credential_pattern_categories": sorted({kind for _, kind in suspicious}),
         "potential_credential_match_locations": sorted(
             set(label for label, _ in suspicious))[:30],
@@ -117,6 +158,8 @@ def main() -> None:
         "reason": "No automated scan proves reuse and redistribution rights for frozen historical source or all Git history",
     }
     print("PUBLICATION_AUDIT " + json.dumps(outcome, ensure_ascii=False, sort_keys=True))
+    for entry in sorted(inventory, key=lambda p: p["path"]):
+        print("PUBLICATION_SOURCE " + json.dumps(entry, ensure_ascii=False, sort_keys=True))
     # Do not fail the ordinary offline reader CI solely because licensing
     # review remains incomplete. Visibility changes require manual review.
     if suspicious:
