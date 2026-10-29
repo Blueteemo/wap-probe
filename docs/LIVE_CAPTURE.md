@@ -124,3 +124,56 @@ visitor-entry redirect on this attempt. Future checks should prefer genuinely
 public same-origin child links or identify the documented guest navigation
 flow without using login credentials; avoid repeating the same category GET
 in a loop or treating the 302 as a domain-wide failure.
+
+## R6 new domestic two-page WML evidence — 2026-10-29
+
+Two **Chinese-language historic WAP origin hosts** now have captured,
+distinct, navigable WML home/child pages with no authentication or redirect.
+This is real progress beyond the earlier strong tx.com.cn home-only candidate.
+Do not conflate two domains with two independent maintainers: their footers
+cross-link, so common ownership/hosting remains possible.
+
+| Profile + URL | HTTP origin result | Child selected from fresh R5 homepage | Child result |
+| --- | --- | --- | --- |
+| Nokia 7110, http://wap.shufaji.com/ | 200; `text/vnd.wap.wml`; 1543 B; SHA-256 `494f2c10e76e0ad8627553ca857a623604d416fd1a192fda51c63ef103dcf6da` | `/0x541B.wml` (the character 君) | 200; WML; 4648 B; SHA-256 `f2847963831362437a726d7d08a12dec5bad2b9800c96892f307388a13c1480a` |
+| Symbian S60v3, http://wap.shufaji.com/ | 200; WML; 1543 B; SHA-256 `92dce101db1176c35633dc82a88f38db9665a7debd7831ceabbafa97711e446d` | `/0x541B.wml` | 200; WML; 4648 B; SHA-256 `f890118195b07957f9c39bca5101840126133e09833f92ad3750e8fee014b125` |
+| Nokia 7110, http://wap.517ming.com/ | 200; WML; 2442 B; SHA-256 `d791f81069570aaac5acb5fd72724910ed9781184d4a73c7aea0c1dda94551b3` | `/helian-xing.wml` (赫连 surname) | 200; WML; 1201 B; SHA-256 `9bc174b9f5c207376a887935a860b1a72617bc6b2284fbd9c58f8789ce045958` |
+
+Each captured document contains one distinct `<card>`, and each was
+parsed by frozen R5 (`status=ok`) and independently well-formed under
+Python `xml.etree.ElementTree`. Home title/content and child title/content
+differ semantically (calligraphy dictionary entries versus the name
+directory), ruling out a merely repeated homepage. Both home pages displayed
+a server clock that changed from 17:02 to 17:04 China local time across
+independent runs, indicating some active page generation; this does not
+establish that editorial content is regularly maintained.
+
+**Network boundaries:** a separate `https://wap.shufaji.com/` attempt
+timed out (curl exit 28 after ~8 s); HTTP works, HTTPS not proven.
+The IP138 exact historic `http://qq.ip138.com/train/search_train.wml`
+returned 301 to the equivalent HTTPS URL; that URL returned HTTP 302 to
+`https://dnsdblookup.com/`, so the exact former WML endpoint is not
+currently verified. Do not generalize these path-specific results to
+entire domains.
+
+**tx.com.cn visitor mechanism:** independently parsed homepage WML in
+both new attempts. The homepage-linked `/editor/cs/official.do` returned
+HTTP 302 to `http://tx.com.cn/in/guest.do?returl=...` (not followed).
+The homepage-linked `/read/cs/goodBook.do` returned HTTP 502 (nginx,
+HTML). Earlier anonymous-JSESSIONID replay to `/zone/cs/category.do`
+also got 302. These outcomes do not show whether registration is necessary:
+the guest flow has not been completed. No credentials, login, POST, or
+automatic protocol downgrade were used.
+
+**Artifacts:** [run 40846429748](https://github.com/Blueteemo/wap-probe/actions/runs/40846429748)
+(artifact ID 12885087285), [run 40846746719](https://github.com/Blueteemo/wap-probe/actions/runs/40846746719)
+(artifact ID 12884693376). Private raw headers may contain Set-Cookie
+values; never publish or commit them. Both artifacts retain for 3 days.
+
+**Grade policy:** `TWO_PAGE_EVIDENCE_MATCHED` is concrete R5-backed
+two-page evidence, but the pre-existing `A_origin` and `A_navigation`
+fields stay `PENDING` until the separate WAP Labs parser/transport
+cross-check and final human review. Physical Nokia browser/transport is
+also untested. Next priority is cross-validate one shufaji and one
+517ming capture using a fixed WAP Labs revision, then finalize R7 and
+document HTTP-only feasibility without stretching the investigation.

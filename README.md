@@ -76,6 +76,19 @@ PYTHONPATH=src python3 -m wap_probe.pipeline --url http://tx.com.cn/ \
 
 `--execute` 为必选的联网开关；默认仅预览任务。参见 [R6 采集说明](docs/LIVE_CAPTURE.md)。CI 不自动扫描站点；所有 A 级结论仍为 PENDING，直到人工复核真实采集证据。
 
+
+### 2026-10-29: 两处国内 WML 双页实网取证
+
+- **书法集** `http://wap.shufaji.com/`：Nokia 7110 与 S60v3 两种画像均取得首页 HTTP 200 `text/vnd.wap.wml`；由首页真实链接进入 `/0x541B.wml`（“君”字）也为 HTTP 200 WML。HTTPS 独立采集连接超时，不可混称支持 HTTPS。
+- **517名站／我要起名网** `http://wap.517ming.com/`：首页及从页面实际链接访问 `/helian-xing.wml` 均为 HTTP 200 `text/vnd.wap.wml`。两站有互相引用的友情链接与按服务器时间变化的“报时”；站点维护者是否仍在更新正文尚未验证。
+- **天下网**：HTTPS WML 首页持续有效，但“服务”二级页返回 302 至 HTTP 访客入口，“小说”二级页返回 502；均不能记为可用 WML 二级页面。
+- **IP138 历史 `.wml` 路径**：HTTP 301 至 HTTPS；HTTPS 又 302 至 `dnsdblookup.com`，所以当前精确路径没有 WML 取证，不代表整个 IP138 已停运。
+
+取证运行：[第一次四入口](https://github.com/Blueteemo/wap-probe/actions/runs/40846429748)、
+[复核与补充](https://github.com/Blueteemo/wap-probe/actions/runs/40846746719)。
+原始私有工件仅保留三天，**不可把 Set-Cookie 等原始响应头提交到仓库**。
+各站首页与二级页的原始 WML 都通过了冻结 R5 及独立 XML 结构解析，但正式 A-origin/A-navigation 仍标记 PENDING，等待独立 WAP 引擎交叉复核和人工签署。
+
 ### 真实 HTTPS 样本的导航排除策略
 
 2026-10-28 首次 HTTPS 采集得到 `tx.com.cn` 首页 HTTP 200、WML 1.1、6,943 字节并由冻结 R5 解析出一张卡片。首页第一条 `/in/fltin_t.jsp?...type=login` 为登录/注册入口，返回 HTTP 302；它不是公开二级内容的有效验收样本。R6 现在排除明显的登录/注册 URL 路径和操作参数，优先尝试首页后续公开 GET 链接。这不保证后续链接一定返回 WML，二级响应仍需独立验证。访问行为仍限制为 GET、不发送登录表单、不跟随重定向。
