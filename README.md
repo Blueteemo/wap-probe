@@ -194,3 +194,24 @@ wap-wsp-lab --lab --allow-network --execute
 已实现 WSP Content-Type 的通用长度格式与字符集解析，覆盖 UTF-8、US-ASCII、ISO-8859-1。未知附加响应头只统计字节数，不解释内容。新增本机 UDP / Latin-1 页面端到端回归，冻结 R5 不变。此版本没有再次访问公开实验网关，HTTP Agent 与 MCP 保持原样。
 
 详见 [兼容性报告](docs/WSP_HEADERS_CHARSET_20261029.md)。
+
+
+### v0.8.2｜WSP 原始报文保存与离线 Agent 会话
+
+受控 `wap-wsp-lab` 现在可以在用户明确指定时保存一次 GET/Reply 的原始 WSP 二进制报文和 SHA-256 清单，**不伪装成 HTTP/curl 证据**。随后 Agent 可离线导入、阅读 WML/WMLC 卡片、切换卡片并返回：
+
+```bash
+# 首步仅访问程序内固定的公开匿名互操作资源；通常只需执行一次
+wap-wsp-lab --lab --allow-network --execute --evidence-out ./evidence/wsp-original
+
+# 以下全部离线，不需要 --execute
+wap-agent import-wsp --evidence ./evidence/wsp-original --out ./evidence/wsp-session
+wap-agent read --session ./evidence/wsp-session
+# 只有在 cards[] 提供 index=1 时才执行
+wap-agent card --session ./evidence/wsp-session --index 1
+wap-agent back --session ./evidence/wsp-session
+```
+
+离线 WSP 会话**不能继续联网跟随普通链接、do/go 或表单**。每次读取都会核查报文、哈希、正文和冻结 R5 导出的一致性，拒绝被修改的记录。返回 `source_authenticated: false`：哈希可检查文件完整性，**不能证明 UDP 网关身份或提供第三方签名**。本轮仅通过离线和本机 UDP 验证，未重复访问公开网关。
+
+[原始取证格式、限制与使用说明](docs/WSP_OFFLINE_EVIDENCE_20261029.md)。

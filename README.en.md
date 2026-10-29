@@ -227,3 +227,24 @@ No root, proxy, Docker, credentials, arbitrary UDP endpoints, POST, retries, red
 The separate laboratory client now handles bounded WSP Content-Type general forms, including UTF-8, US-ASCII and ISO-8859-1 charset parameters. Extra response headers are treated as opaque bytes, never forwarded or displayed. New offline tests include end-to-end localhost UDP retrieval of Latin-1 WML text through frozen R5. No additional public gateway probe was performed in this release; standard HTTP Agent and MCP behavior remains unchanged.
 
 [Details and limits](docs/WSP_HEADERS_CHARSET_20261029.md).
+
+
+### v0.8.2 — Original WSP PDU evidence and strictly offline Agent import
+
+The restricted `wap-wsp-lab` command can optionally save a **single raw WSP GET and Reply** with SHA-256 evidence metadata. This is explicitly **not** HTTP/curl capture evidence. The Agent can import this into a new offline-only WML/WMLC card session:
+
+```bash
+# One explicitly authorized request to the hard-coded anonymous public test page
+wap-wsp-lab --lab --allow-network --execute --evidence-out ./evidence/wsp-original
+
+# No network access during any of these steps
+wap-agent import-wsp --evidence ./evidence/wsp-original --out ./evidence/wsp-session
+wap-agent read --session ./evidence/wsp-session
+# Only if the returned cards[] actually includes index 1:
+wap-agent card --session ./evidence/wsp-session --index 1
+wap-agent back --session ./evidence/wsp-session
+```
+
+Each subsequent read verifies the original PDUs, exact permitted request, transaction ID, checksums, derived WML body, and reruns frozen R5 to reject altered displayed text. Imported WSP sessions **never allow HTTP link following, do/go or form submission/planning**, and there is no MCP import tool. `source_authenticated: false` is deliberate: these hashes document **local integrity**, not signed server provenance, gateway identity, or immutable evidence. All new verification is offline/loopback only; no repeat public gateway request occurred.
+
+See the [WSP offline evidence and import guide](docs/WSP_OFFLINE_EVIDENCE_20261029.md).

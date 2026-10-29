@@ -141,3 +141,12 @@ Verified against WAP Labs' published gateway: WSP Reply 200, WMLC MIME, 235 bina
 The standalone `wap-wsp-lab` experiment recognizes additional bounded WSP Content-Type forms and explicit UTF-8, US-ASCII and ISO-8859-1 parameters. Unknown additional response headers remain opaque. Offline regression tests include an actual loopback UDP Latin-1 WML page decoded by frozen R5. No new MCP tool or HTTP Agent integration was introduced, and the experimental public gateway was not contacted during this update.
 
 [Protocol scope and safety notes](docs/WSP_HEADERS_CHARSET_20261029.md).
+
+
+### v0.8.2 — Offline WSP evidence sessions
+
+The opt-in `wap-wsp-lab --lab --allow-network --execute --evidence-out ./record` writes the original WSP GET and Reply PDUs into a **new** directory with a checksum manifest. The Agent CLI then supports `wap-agent import-wsp --evidence ./record --out ./session` without requiring network permission. `read`, `card`, and `back` work on the imported WML/WMLC cards; network `follow`, `go`, and form planning are disabled for these sessions.
+
+On each read the raw packet hashes, fixed test resource, transaction ID and derived R5 output are revalidated, so edited body or display text is rejected. These records **do not** impersonate an HTTP/curl capture. `source_authenticated: false` marks unauthenticated UDP source provenance despite local hash consistency.
+
+No MCP import tool or unrestricted UDP target was added. See [WSP offline evidence guide](docs/WSP_OFFLINE_EVIDENCE_20261029.md).
