@@ -215,3 +215,19 @@ wap-agent back --session ./evidence/wsp-session
 离线 WSP 会话**不能继续联网跟随普通链接、do/go 或表单**。每次读取都会核查报文、哈希、正文和冻结 R5 导出的一致性，拒绝被修改的记录。返回 `source_authenticated: false`：哈希可检查文件完整性，**不能证明 UDP 网关身份或提供第三方签名**。本轮仅通过离线和本机 UDP 验证，未重复访问公开网关。
 
 [原始取证格式、限制与使用说明](docs/WSP_OFFLINE_EVIDENCE_20261029.md)。
+
+
+### v0.8.3｜MCP 读取已验证的本地 WSP 会话
+
+MCP 现新增 **`wap_import_wsp`**，仅用于将**服务启动时由操作者指定**的原始 WSP 证据导入临时的只读 Agent 会话。工具本身没有路径、URL 或 UDP 网关参数，更不会联网。
+
+```bash
+# 前提：已有 v0.8.2 生成并保存的原始 WSP 证据
+wap-mcp --wsp-evidence ./evidence/wsp-original
+```
+
+Agent 调用 `wap_import_wsp`（参数为空）得到 `session_id`，随后使用原来的 `wap_read`、`wap_card` 和 `wap_back` 离线阅读。**即使 MCP 服务启用 `--allow-network`，WSP 离线会话也不能执行 `wap_follow`、`wap_go` 或表单规划。**重复导入返回同一个已核验会话，不会无限复制文件。
+
+[本轮 MCP 接入与安全说明](docs/MCP_WSP_IMPORT_20261029.md) · [整体开发进度与后续路线](docs/PROJECT_ROADMAP_20261029.md)
+
+> 当前私有、免 root、只读 Agent MVP 的工程进度估算为 **80%–85%**。这一比例不适用于完整 WAP 1.x 图形浏览器。

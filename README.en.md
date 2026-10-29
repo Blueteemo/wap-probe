@@ -248,3 +248,19 @@ wap-agent back --session ./evidence/wsp-session
 Each subsequent read verifies the original PDUs, exact permitted request, transaction ID, checksums, derived WML body, and reruns frozen R5 to reject altered displayed text. Imported WSP sessions **never allow HTTP link following, do/go or form submission/planning**, and there is no MCP import tool. `source_authenticated: false` is deliberate: these hashes document **local integrity**, not signed server provenance, gateway identity, or immutable evidence. All new verification is offline/loopback only; no repeat public gateway request occurred.
 
 See the [WSP offline evidence and import guide](docs/WSP_OFFLINE_EVIDENCE_20261029.md).
+
+
+### v0.8.3 — MCP operator-selected, offline WSP import
+
+The MCP tool set now includes **`wap_import_wsp`**, which reads only a **local WSP lab evidence folder explicitly configured by the MCP server operator at startup**. Its tool schema has no path, URL, UDP gateway, or network execution arguments.
+
+```bash
+# Requires an existing v0.8.2 lab record
+wap-mcp --wsp-evidence ./evidence/wsp-original
+```
+
+An Agent calls `wap_import_wsp` with an empty argument object, receives an opaque `session_id`, and uses the existing `wap_read`, `wap_card` and `wap_back` tools offline. The imported WSP session **cannot run `wap_follow`, `wap_go`, or form planning even if the HTTP MCP server has network permission**. Reimporting returns the same validated session without creating unlimited copies.
+
+See [MCP import security and usage](docs/MCP_WSP_IMPORT_20261029.md) and the [overall project roadmap](docs/PROJECT_ROADMAP_20261029.md).
+
+The private, rootless, read-only Agent MVP is estimated at **80%–85% complete**; this does not measure full WAP 1.x browser compatibility.

@@ -150,3 +150,12 @@ The opt-in `wap-wsp-lab --lab --allow-network --execute --evidence-out ./record`
 On each read the raw packet hashes, fixed test resource, transaction ID and derived R5 output are revalidated, so edited body or display text is rejected. These records **do not** impersonate an HTTP/curl capture. `source_authenticated: false` marks unauthenticated UDP source provenance despite local hash consistency.
 
 No MCP import tool or unrestricted UDP target was added. See [WSP offline evidence guide](docs/WSP_OFFLINE_EVIDENCE_20261029.md).
+
+
+### v0.8.3 — Import operator-selected WSP evidence with MCP
+
+An operator who already has a v0.8.2 WSP lab record starts the MCP server with `wap-mcp --wsp-evidence ./evidence/wsp-original`. The Agent may then call `wap_import_wsp({})` to receive an opaque `session_id` and use the existing read-only `wap_read`, `wap_card`, and `wap_back` tools.
+
+Unlike regular HTTP `wap_open`, **`wap_import_wsp` has no path, URL, gateway, or execute argument**. Startup configuration belongs exclusively to the host operator. It does not send UDP, never turns evidence into an HTTP capture, and does not enable WSP browsing via MCP. The imported session rejects link following and form plans even when the MCP server's separate HTTP network permission is enabled.
+
+[Offline WSP MCP import details](docs/MCP_WSP_IMPORT_20261029.md) · [Project scope and roadmap](docs/PROJECT_ROADMAP_20261029.md).
