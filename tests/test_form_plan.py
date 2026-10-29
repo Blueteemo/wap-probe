@@ -181,5 +181,116 @@ class GetFormPlanTests(unittest.TestCase):
             plan_current(self.root, 0, {"q": "a", "genre": "puzzle"})
 
 
+class WMLCompatibilityMatrixTests(unittest.TestCase):
+    """Offline standards-boundary corpus. An unsupported feature must fail closed."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name) / "session"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _with(self, raw: bytes, values=None):
+        session(self.root, raw)
+        return plan_current(self.root, 0, values or {"q": "hello", "genre": "puzzle"})
+
+    def _reject(self, raw: bytes, message: str = ""):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t) / "session"
+            session(root, raw)
+            with self.assertRaisesRegex(ValueError, message):
+                plan_current(root, 0, {"q": "hello", "genre": "puzzle"})
+
+    def test_ambiguous_controls_with_same_name(self):
+        raw = SEARCH.replace(
+            b'<input name="q" type="text" maxlength="16"/>',
+            b'<input name="q" type="text" maxlength="16"/>'
+            b'<input name="q" type="text" maxlength="16"/>',
+        )
+        self._reject(raw, "Duplicate WML control variable")
+
+    def test_event_driven_variable_assignment_not_emulated(self):
+        event = (b'<onevent type="onenterforward"><refresh>'
+                 b'<setvar name="q" value="do-not-evaluate"/>'
+                 b'</refresh></onevent>')
+        raw = SEARCH.replace(b'<card id="search">', b'<card id="search">' + event)
+        self._reject(raw, "Stateful WML events")
+
+    def test_postfield_setvar_must_not_be_interpreted(self):
+        raw = SEARCH.replace(
+            b'<postfield name="q" value="$(q)"/>',
+            b'<postfield name="q" value="$(q)"/>'
+            b'<setvar name="q" value="override"/>')
+        self._reject(raw, "Stateful WML events")
+
+    def test_input_format_mask_not_ignored(self):
+        raw = SEARCH.replace(
+            b'<input name="q" type="text" maxlength="16"/>',
+            b'<input name="q" type="text" maxlength="16" format="*N"/>',
+        )
+        self._reject(raw, "Missing verified public form input")
+
+    def test_option_onpick_is_not_silently_ignored(self):
+        raw = SEARCH.replace(
+            b'<option value="puzzle">Puzzle</option>',
+            b'<option value="puzzle" onpick="next.wml">Puzzle</option>',
+        )
+        self._reject(raw, "Missing verified public form input")
+
+    def test_duplicate_choice_values_are_ambiguous(self):
+        raw = SEARCH.replace(
+            b'<option value="action">Action</option>',
+            b'<option value="puzzle">Action</option>',
+        )
+        self._reject(raw, "Missing verified public form input")
+
+    def test_select_multiple_not_emulated_as_one_value(self):
+        raw = SEARCH.replace(
+            b'<select name="genre">',
+            b'<select name="genre" multiple="true">',
+        )
+        self._reject(raw, "Missing verified public form input")
+
+    def test_invalid_maxlength_not_treated_as_unbounded(self):
+        raw = SEARCH.replace(b'maxlength="16"', b'maxlength="16bad"')
+        self._reject(raw, "Missing verified public form input")
+
+    def test_url_input_is_not_an_unchecked_text_value(self):
+        raw = SEARCH.replace(
+            b'<input name="q" type="text" maxlength="16"/>',
+            b'<input name="q" type="url" maxlength="16"/>',
+        )
+        self._reject(raw, "Missing verified public form input")
+
+    def test_non_utf8_source_requires_explicit_utf8_accept_charset(self):
+        raw = SEARCH.replace(
+            b'<p>', '<p>你好'.encode("gb2312"), 1)
+        raw = (b'<?xml version="1.0" encoding="gb2312"?>' + raw)
+        self._reject(raw, "Non-UTF-8 document requires explicit")
+        accepted = raw.replace(b'method="get"', b'method="get" accept-charset="utf-8"')
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t) / "session"
+            session(root, accepted)
+            # The evidence metadata is UTF-8 by default but XML declaration wins.
+            got = plan_current(root, 0, {"q": "hello", "genre": "puzzle"})
+            self.assertTrue(got["ok"])
+
+    def test_unicode_query_encoding_is_bounded(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t) / "session"
+            session(root)
+            values = {"q": "猫 & fish", "genre": "puzzle"}
+            planned = plan_current(root, 0, values)
+            self.assertTrue(planned["ok"])
+            self.assertEqual(planned["query_keys"], ["q", "cat"])
+            # Explicitly bound UTF-8 representation; only size/hash leave.
+            self.assertGreater(planned["query_bytes"], len("q=cat&cat=puzzle"))
+
+    def test_sensitive_actions_still_not_executable(self):
+        self.assertNotIn("form-execute", __import__(
+            "wap_probe.agent_browser", fromlist=["main"]).__dict__)
+
+
 if __name__ == "__main__":
     unittest.main()

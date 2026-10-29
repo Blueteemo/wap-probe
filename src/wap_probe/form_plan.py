@@ -9,12 +9,12 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from urllib.parse import urlencode, urljoin, urlsplit, quote
+from urllib.parse import urlencode, urljoin, urlsplit
 
 from wap_probe.collector import validate_url
 from wap_probe.navigation import evaluate_link
 from wap_probe.form_inspector import (
-    CODECS, DECLARED_ENCODING, MIME_ENCODING, PRIVATE, MAX_XML,
+    CODECS, DECLARED_ENCODING, MIME_ENCODING, PRIVATE,
     inspect_forms, _tag,
 )
 
@@ -33,7 +33,7 @@ MAX_VALUES = 8
 MAX_TARGET = 1024
 
 
-def _source_cards(raw: bytes, content_type: str) -> list:
+def _source_cards(raw: bytes, content_type: str) -> tuple[list, str]:
     """Decode restricted XML and enforce the same document limits as preview."""
     inspect_forms(raw, content_type)
     declaration = re.match(rb"\s*<\?xml[^>]{0,200}\?>", raw, flags=re.I)
@@ -44,7 +44,7 @@ def _source_cards(raw: bytes, content_type: str) -> list:
     if codec not in CODECS:
         raise ValueError("Unsupported form charset")
     root = ET.fromstring(raw.decode(codec, errors="strict"))
-    return [node for node in root if _tag(node) == "card"]
+    return [node for node in root if _tag(node) == "card"], codec
 
 
 def _validate_values(values: object) -> dict[str, str]:
@@ -61,20 +61,28 @@ def _validate_values(values: object) -> dict[str, str]:
 
 
 def _resolve_plan(source_url: str, card, action_index: int,
-                  values: dict[str, str]) -> dict:
+                  values: dict[str, str], *, source_codec: str = "utf-8") -> dict:
     actions = [node for node in card.iter() if _tag(node) == "go"]
     if (type(action_index) is not int or not 0 <= action_index < len(actions)
             or action_index >= 32):
         raise ValueError("Invalid form action index")
     go = actions[action_index]
+    # WML variable/event semantics are stateful. A dry-run must never
+    # invent variable values for tasks executed by a handset.
+    forbidden_context = {"onevent", "timer", "setvar", "refresh", "prev", "noop"}
+    if any(_tag(node) in forbidden_context for node in card.iter()):
+        raise ValueError("Stateful WML events or variables are unsupported")
     if go.get("method", "get").lower() != "get":
         raise ValueError("Only GET actions are eligible for planning")
     if go.get("sendreferer", "false").lower() not in ("false", "0"):
         raise ValueError("Referrer-sending actions are unsupported")
     if go.get("enctype", "application/x-www-form-urlencoded").lower() != "application/x-www-form-urlencoded":
         raise ValueError("Unsupported GET form encoding")
-    if go.get("accept-charset", "utf-8").lower() not in ("utf-8", "utf8"):
+    charset = go.get("accept-charset")
+    if charset is not None and charset.lower().strip() not in ("utf-8", "utf8"):
         raise ValueError("Unsupported form accept-charset")
+    if source_codec not in ("utf-8", "utf8") and charset is None:
+        raise ValueError("Non-UTF-8 document requires explicit UTF-8 accept-charset")
     if any(_tag(child) != "postfield" for child in go):
         raise ValueError("Task contains unhandled or state-changing WML elements")
     href = go.get("href")
@@ -92,23 +100,40 @@ def _resolve_plan(source_url: str, card, action_index: int,
     if parsed.query or parsed.fragment:
         raise ValueError("GET endpoint must be a literal path")
     control_map = {}
+    encountered = set()
     for node in card.iter():
         if _tag(node) not in ("input", "select"):
             continue
         name = node.get("name", "")
+        if not isinstance(name, str):
+            continue
+        if name in encountered:
+            raise ValueError("Duplicate WML control variable")
+        encountered.add(name)
         if (not FIELD_NAME.fullmatch(name) or PRIVATE.search(name)
-                or name in control_map or
-                (_tag(node) == "input" and node.get("type", "text").lower() not in ("text", "url"))):
+                or (_tag(node) == "input" and node.get("type", "text").lower() != "text")):
+            continue
+        if node.get("format") is not None or node.get("emptyok") is not None:
+            # WML format masks and empty-input semantics are not implemented.
             continue
         if _tag(node) == "select":
             if node.get("multiple", "false").lower() not in ("false", "no", "0"):
                 continue
-            opts = [opt.get("value") for opt in node.iter() if _tag(opt) == "option"]
-            if len(opts) > 32 or any(o is None for o in opts):
+            options = [opt for opt in node.iter() if _tag(opt) == "option"]
+            if any(opt.get("onpick") is not None
+                   or any(_tag(n) == "onevent" for n in opt.iter())
+                   for opt in options):
+                continue
+            opts = [opt.get("value") for opt in options]
+            if (not opts or len(opts) > 32 or any(
+                    o is None or "$" in o for o in opts)
+                    or len(set(opts)) != len(opts)):
                 continue
             control_map[name] = ("select", set(opts))
         else:
             maximum = node.get("maxlength", "")
+            if maximum and not maximum.isdigit():
+                continue
             maxlen = int(maximum) if maximum.isdigit() else MAX_INPUT
             control_map[name] = ("input", min(maxlen, MAX_INPUT))
 
@@ -183,13 +208,14 @@ def plan_current(root: Path, action_index: int, values: object) -> dict:
         with frozen_r5() as probe:
             raw, _ = _legacy_parser(probe).decode_wmlc(raw)
         mime = "text/vnd.wap.wml; charset=utf-8"
-    cards = _source_cards(raw, mime)
+    cards, source_codec = _source_cards(raw, mime)
     idx = current["active_card_index"]
     if len(cards) != current["card_count"]:
         raise ValueError("Source and R5 card count disagree")
     if len([node for node in cards[idx].iter() if _tag(node) == "go"]) != preview["action_count"]:
         raise ValueError("Source and R5 form action count disagree")
-    result = _resolve_plan(current["url"], cards[idx], action_index, values)
+    result = _resolve_plan(current["url"], cards[idx], action_index, values,
+                           source_codec=source_codec)
     result["source_sha256"] = current["sha256"]
     result["active_card_index"] = idx
     result["action_index"] = action_index
