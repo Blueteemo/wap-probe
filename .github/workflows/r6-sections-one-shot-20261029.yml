@@ -1,4 +1,4 @@
-name: R6 public sections and domestic WML check (one-shot)
+name: R6 WML followup confirmation (one-shot)
 
 # Automatic once on creation of this exact workflow file, not scheduled.
 on:
@@ -43,7 +43,7 @@ jobs:
                       raise SystemExit('Unsafe archive path')
               z.extractall('.r5_unpacked')
           PY
-      - name: Bounded public GET survey (4 origins, at most 8 GETs)
+      - name: Bounded WML followup (4 origins, at most 8 GETs)
         shell: bash
         run: |
           set -euo pipefail
@@ -51,12 +51,12 @@ jobs:
           # Actual child GET is derived ONLY from a newly parsed homepage.
           # No credentials, POST, cookies, automatic redirect, auth path or downgrade.
           function try_site {
-            local label="$1" url="$2" preferred="$3"
+            local label="$1" url="$2" preferred="$3" profile="$4"
             local extra=()
             if [[ -n "$preferred" ]]; then extra+=(--prefer-path "$preferred"); fi
             echo "::group::$label"
             if ! python -m wap_probe.pipeline \
-              --url "$url" --profile wap1 \
+              --url "$url" --profile "$profile" \
               --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
               --out "evidence/$label" --limit 1 --delay 2 \
               --execute "${extra[@]}"; then
@@ -65,10 +65,10 @@ jobs:
             echo "::endgroup::"
             sleep 3
           }
-          try_site tx-services 'https://tx.com.cn/' '/editor/cs/official.do'
-          try_site tx-novels 'https://tx.com.cn/' '/read/cs/goodBook.do'
-          try_site ip138-legacy 'http://qq.ip138.com/train/search_train.wml' ''
-          try_site shufaji-legacy 'http://wap.shufaji.com/' ''
+          try_site shufaji-s60 'http://wap.shufaji.com/' '' 's60'
+          try_site shufaji-https 'https://wap.shufaji.com/' '' 'wap1'
+          try_site ip138-https 'https://qq.ip138.com/train/search_train.wml' '' 'wap1'
+          try_site ming-legacy 'http://wap.517ming.com/' '' 'wap1'
       - name: Print safe status summary without raw response headers
         if: always()
         shell: bash
@@ -77,8 +77,8 @@ jobs:
           from pathlib import Path
           import json
           results=[]
-          for target in ('tx-services','tx-novels','ip138-legacy','shufaji-legacy'):
-              files=list(Path('evidence',target).glob('001_wap1/run_report.json'))
+          for target in ('shufaji-s60','shufaji-https','ip138-https','ming-legacy'):
+              files=list(Path('evidence',target).glob('001_*/run_report.json'))
               if not files:
                   results.append(dict(target=target,stage='NO_REPORT',grade='PENDING'))
                   continue
