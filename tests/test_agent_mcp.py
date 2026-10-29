@@ -89,7 +89,7 @@ class MCPProtocolTests(unittest.TestCase):
     def test_tools_discovery_and_ping(self):
         tools = self.request("tools/list")["result"]["tools"]
         self.assertEqual({t["name"] for t in tools},
-                         {"wap_open", "wap_follow", "wap_read", "wap_back"})
+                         {"wap_open", "wap_follow", "wap_read", "wap_back", "wap_card"})
         self.assertEqual(self.request("ping")["result"], {})
 
     def test_notifications_no_response(self):

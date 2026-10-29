@@ -24,6 +24,9 @@ VALID_STATUSES = {"WML_CAPTURED_NEEDS_R5", "WMLC_CAPTURED_NEEDS_R5"}
 MAX_PAGES = 8
 MAX_LINKS = 64
 MAX_TEXT = 12000
+MAX_CARDS = 256
+MAX_HISTORY = 64
+CARD_REF = re.compile(r'#[A-Za-z_][A-Za-z0-9_.:-]{0,127}\Z')
 
 
 @contextmanager
@@ -69,8 +72,8 @@ def _safe_xml_text(data: bytes, content_type: str) -> str | None:
     return "\n".join(segments)[:MAX_TEXT]
 
 
-def page_view(page_dir: Path) -> dict:
-    """Recheck recorded evidence and return bounded text/safe links."""
+def page_view(page_dir: Path, *, card_index: int = 0) -> dict:
+    """Verify recorded bytes; expose only the selected WML card and its links."""
     page_dir = Path(page_dir)
     evidence = verify_folder(page_dir)
     metadata = json.loads((page_dir / "metadata.json").read_text(encoding="utf-8"))
@@ -79,34 +82,42 @@ def page_view(page_dir: Path) -> dict:
         "mime": metadata["content_type"].split(";", 1)[0].strip().lower(),
         "bytes": metadata["body_bytes"], "sha256": metadata["body_sha256"],
         "capture_status": evidence["status"], "ok": False,
-        "text": None, "links": [],
+        "text": None, "links": [], "card_links": [], "cards": [],
     }
     if evidence["status"] not in VALID_STATUSES:
         return result
     record = read_r5_export(page_dir / "r5_export.json", page_dir)
+    if type(card_index) is not int or not 0 <= card_index < record["card_count"]:
+        raise ValueError("Invalid card index")
     result["ok"] = True
     result["format"] = "wmlc" if result["mime"] == "application/vnd.wap.wmlc" else "wml"
-    if result["format"] == "wml":
-        result["text"] = _safe_xml_text((page_dir / "body.bin").read_bytes(),
-                                        metadata["content_type"])
-    else:
-        # R5 already decoded the original WBXML; its export is bound to the
-        # exact raw SHA-256, and the same export is validated above.
-        result["text"] = "\n".join(
-            card["text"] for card in record["cards"] if card["text"]
-        )[:MAX_TEXT]
-    result["text_available"] = result["text"] is not None
     result["card_count"] = record["card_count"]
-    for card in record["cards"]:
-        for link in card["links"]:
-            if len(result["links"]) >= MAX_LINKS:
-                break
-            url, reason = evaluate_link(metadata["url"], link)
-            if url is not None:
-                result["links"].append({
-                    "index": len(result["links"]), "url": url,
-                    "method": "GET", "card_id": card.get("id"),
+    result["active_card_index"] = card_index
+    cards = record["cards"]
+    result["cards"] = [
+        {"index": i, "id": card["id"], "preview": card["text"][:160]}
+        for i, card in enumerate(cards)
+    ]
+    result["text"] = cards[card_index]["text"]
+    result["text_available"] = True
+    ids = {card["id"]: i for i, card in enumerate(cards)
+           if isinstance(card["id"], str) and card["id"]}
+    for link in cards[card_index]["links"]:
+        href = link.get("href")
+        if (link.get("method") == "GET" and isinstance(href, str)
+                and CARD_REF.fullmatch(href) and href[1:] in ids):
+            if len(result["card_links"]) < MAX_LINKS:
+                result["card_links"].append({
+                    "index": len(result["card_links"]),
+                    "id": href[1:], "target_index": ids[href[1:]],
                 })
+            continue
+        url, reason = evaluate_link(metadata["url"], link)
+        if url is not None and len(result["links"]) < MAX_LINKS:
+            result["links"].append({
+                "index": len(result["links"]), "url": url,
+                "method": "GET", "card_id": cards[card_index]["id"],
+            })
     return result
 
 
@@ -123,6 +134,16 @@ def _load_session(root: Path) -> dict:
             or not 0 <= state["cursor"] < len(state["pages"])
             or state.get("profile") not in PROFILES):
         raise ValueError("Invalid browser session")
+    positions = state.setdefault("card_positions", [0] * len(state["pages"]))
+    history = state.setdefault("card_history", [])
+    if (not isinstance(positions, list) or len(positions) != len(state["pages"])
+            or any(type(n) is not int or not 0 <= n < MAX_CARDS for n in positions)
+            or not isinstance(history, list) or len(history) > MAX_HISTORY
+            or any(not isinstance(x, list) or len(x) != 2
+                   or type(x[0]) is not int or type(x[1]) is not int
+                   or not 0 <= x[0] < len(state["pages"])
+                   or not 0 <= x[1] < MAX_CARDS for x in history)):
+        raise ValueError("Invalid card navigation state")
     return state
 
 
@@ -133,12 +154,28 @@ def _current_page(root: Path, state: dict) -> Path:
     return root / "pages" / name
 
 
+def _view(root: Path, state: dict) -> dict:
+    return {"session": str(root), "cursor": state["cursor"],
+            "page_count": len(state["pages"]),
+            **page_view(_current_page(root, state),
+                        card_index=state["card_positions"][state["cursor"]])}
+
+
+def _remember(state: dict) -> None:
+    history = state["card_history"]
+    history.append([state["cursor"], state["card_positions"][state["cursor"]]])
+    if len(history) > MAX_HISTORY:
+        del history[0]
+
+
 def _append_page(root: Path, state: dict, page_dir: Path) -> dict:
+    if state["pages"]:
+        _remember(state)
     state["pages"].append(page_dir.name)
+    state["card_positions"].append(0)
     state["cursor"] = len(state["pages"]) - 1
     _session_path(root).write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
-    return {"session": str(root), "cursor": state["cursor"],
-            "page_count": len(state["pages"]), **page_view(page_dir)}
+    return _view(root, state)
 
 
 def _capture_page(url: str, profile: str, folder: Path) -> dict:
@@ -161,7 +198,8 @@ def open_page(url: str, root: Path, profile: str = "wap1", *, capture_page=_capt
     page = root / "pages" / "page-0001"
     capture_page(url, profile, page)
     state = {"schema": "wap-agent-browser-v1", "profile": profile,
-             "pages": [], "cursor": 0}
+             "pages": [], "cursor": 0, "card_positions": [],
+             "card_history": []}
     return _append_page(root, state, page)
 
 
@@ -171,7 +209,7 @@ def follow_link(root: Path, index: int, *, capture_page=_capture_page) -> dict:
     state = _load_session(root)
     if len(state["pages"]) >= MAX_PAGES:
         raise ValueError("Session page limit reached")
-    current = page_view(_current_page(root, state))
+    current = _view(root, state)
     if not current["ok"]:
         raise ValueError("Current page is not parsed WML")
     if type(index) is not int or not 0 <= index < len(current["links"]):
@@ -187,19 +225,39 @@ def follow_link(root: Path, index: int, *, capture_page=_capture_page) -> dict:
 
 def read_page(root: Path) -> dict:
     root = Path(root)
+    return _view(root, _load_session(root))
+
+
+def select_card(root: Path, index: int) -> dict:
+    """View any card from the verified local deck without making a GET."""
+    root = Path(root)
     state = _load_session(root)
-    return {"session": str(root), "cursor": state["cursor"],
-            "page_count": len(state["pages"]), **page_view(_current_page(root, state))}
+    current = _view(root, state)
+    if not current["ok"]:
+        raise ValueError("Current page is not parsed WML")
+    if type(index) is not int or not 0 <= index < current["card_count"]:
+        raise ValueError("Invalid card index")
+    if index == state["card_positions"][state["cursor"]]:
+        return current
+    _remember(state)
+    state["card_positions"][state["cursor"]] = index
+    _session_path(root).write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+    return _view(root, state)
 
 
 def go_back(root: Path) -> dict:
     root = Path(root)
     state = _load_session(root)
-    if state["cursor"] == 0:
-        raise ValueError("No previous page")
-    state["cursor"] -= 1
+    if state["card_history"]:
+        page_index, card_index = state["card_history"].pop()
+        state["cursor"] = page_index
+        state["card_positions"][page_index] = card_index
+    elif state["cursor"] > 0:  # Backward compatibility with old sessions.
+        state["cursor"] -= 1
+    else:
+        raise ValueError("No previous page or card")
     _session_path(root).write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
-    return read_page(root)
+    return _view(root, state)
 
 
 def main(argv=None) -> int:
@@ -214,6 +272,9 @@ def main(argv=None) -> int:
     p.add_argument("--session", type=Path, required=True)
     p.add_argument("--link", type=int, required=True)
     p.add_argument("--execute", action="store_true", help="Required to fetch")
+    p = sub.add_parser("card", help="Select a card in the current deck offline")
+    p.add_argument("--session", type=Path, required=True)
+    p.add_argument("--index", type=int, required=True)
     for command in ("read", "back"):
         sub.add_parser(command).add_argument("--session", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -226,6 +287,8 @@ def main(argv=None) -> int:
             result = follow_link(args.session, args.link)
         elif args.command == "read":
             result = read_page(args.session)
+        elif args.command == "card":
+            result = select_card(args.session, args.index)
         else:
             result = go_back(args.session)
         print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
