@@ -13,10 +13,7 @@ automated site crawler.
 The repository also preserves the frozen R5 WML/WBXML parser and the
 2026 Chinese WAP website survey.
 
-> **Publication is intended; permanent privacy is not a project requirement.**
-> The repository currently remains private while historical frozen R5 rights,
-> licensing and Git/Actions history are reviewed. See the
-> [publication-readiness audit](docs/PUBLICATION_READINESS_20261029.md).
+> **Publication plan: keep `Blueteemo/wap-probe` as the only maintained repository and make it public in place once cleared.** No separate public fork/repository is planned. The repository remains private until the archived third-party response material, source licensing, and visibility switch receive explicit approval. See the [publication-readiness audit](docs/PUBLICATION_READINESS_20261029.md).
 
 ## What works today
 
