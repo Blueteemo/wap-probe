@@ -11,6 +11,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from wap_probe.form_inspector import inspect_forms
 
 R5_SUPPORTED = {"text/vnd.wap.wml", "application/vnd.wap.wmlc"}
 R5_SCHEMA = "r6-r5-export-v1"
@@ -66,14 +67,28 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
     if mime == "application/vnd.wap.wmlc" and analysis["format"] != "wmlc":
         raise ValueError("R5 MIME/format mismatch")
 
+    # The structural preview is read-only; never create or submit requests.
+    try:
+        xml_body = core.decode_wmlc(body)[0] if mime == "application/vnd.wap.wmlc" else body
+        parsed_forms = inspect_forms(
+            xml_body, "text/vnd.wap.wml" if mime.endswith("wmlc") else content_type)
+        if len(parsed_forms) != len(analysis["cards"]):
+            parsed_forms = []
+    except (ValueError, TypeError, UnicodeError):
+        parsed_forms = []
+
     cards = []
-    for card in analysis["cards"]:
+    for card_index, card in enumerate(analysis["cards"]):
         links = []
         for link in card.get("links", []):
             if not isinstance(link, dict):
                 raise ValueError("Malformed R5 link")
             # Even a GET link can require <postfield> or other input.
             # Such links must never become automatic second-page targets.
+            # GET may be state-changing. Never treat a WML <go> action as
+            # implicit safe navigation, whether it has postfields or not.
+            if link.get("kind") == "go":
+                continue
             if link.get("requires_inputs"):
                 continue
             href, method = link.get("href"), link.get("method", "get")
@@ -84,7 +99,8 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
         if not isinstance(text, str):
             raise ValueError("R5 card text is not a string")
         cards.append({"id": card.get("id"), "links": links,
-                      "text": text[:12000]})
+                      "text": text[:12000],
+                      "form_preview": parsed_forms[card_index] if parsed_forms else None})
 
     return {
         "schema": R5_SCHEMA,

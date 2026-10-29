@@ -60,8 +60,29 @@ def read_r5_export(export_path, capture_dir):
         card_text = card.get("text", "")
         if not isinstance(card_text, str) or len(card_text) > 12000:
             raise ValueError("Invalid R5 card text")
+        form = card.get("form_preview")
+        if form is not None:
+            if (not isinstance(form, dict)
+                    or form.get("read_only") is not True
+                    or not isinstance(form.get("fields"), list)
+                    or not isinstance(form.get("actions"), list)
+                    or len(form["fields"]) > 48
+                    or len(form["actions"]) > 32
+                    or type(form.get("field_count")) is not int
+                    or type(form.get("action_count")) is not int
+                    or form["field_count"] < len(form["fields"])
+                    or form["action_count"] < len(form["actions"])
+                    or type(form.get("truncated")) is not bool):
+                raise ValueError("Invalid R5 form preview")
+            for field in form["fields"]:
+                if not isinstance(field, dict) or field.get("kind") not in ("input", "select"):
+                    raise ValueError("Invalid R5 form field")
+            for action in form["actions"]:
+                if (not isinstance(action, dict)
+                        or action.get("submission_available") is not False):
+                    raise ValueError("Invalid R5 form action")
         validated_cards.append({"id": card.get("id"), "links": parsed_links,
-                                "text": card_text})
+                                "text": card_text, "form_preview": form})
     return {"source_sha256": actual_sha, "card_count": len(cards),
             "cards": validated_cards, "links": validated_cards[0]["links"]}
 

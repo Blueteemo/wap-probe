@@ -100,6 +100,8 @@ def page_view(page_dir: Path, *, card_index: int = 0) -> dict:
     ]
     result["text"] = cards[card_index]["text"]
     result["text_available"] = True
+    result["form_preview"] = cards[card_index].get("form_preview")
+    result["form_submission_supported"] = False
     ids = {card["id"]: i for i, card in enumerate(cards)
            if isinstance(card["id"], str) and card["id"]}
     for link in cards[card_index]["links"]:
