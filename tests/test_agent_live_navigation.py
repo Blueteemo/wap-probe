@@ -93,6 +93,42 @@ class LegacyDoNavigationTests(unittest.TestCase):
             self.assertTrue(reply["isError"])
         self.assertEqual(self.requests, [HOME])
 
+    def test_mcp_go_dispatch_requires_single_real_opt_in(self):
+        agent_browser.open_page(HOME, self.root, capture_page=self.capture)
+        server = BrowserServer(Path(self.tmp.name), allow_network=True)
+        server.sessions["opaque"] = self.root
+        with patch("wap_probe.agent_mcp.follow_do", return_value={
+            "ok": True, "session": str(self.root), "page_count": 2,
+            "url": HOME + "m_service/default.wml"}) as spy:
+            response = server.dispatch({
+                "jsonrpc": "2.0", "id": 13, "method": "tools/call",
+                "params": {"name": "wap_go", "arguments": {
+                    "session_id": "opaque", "index": 0, "execute": True}}
+            })["result"]
+        self.assertFalse(response["isError"])
+        self.assertEqual(response["structuredContent"]["session_id"], "opaque")
+        self.assertNotIn("session", response["structuredContent"])
+        spy.assert_called_once_with(self.root, 0)
+        self.assertEqual(self.requests, [HOME])
+
+    def test_cli_go_execute_dispatch(self):
+        outputs = []
+        with patch.object(agent_browser, "follow_do", return_value={"ok": True}) as spy:
+            with patch("builtins.print", side_effect=outputs.append):
+                code = agent_browser.main(["go", "--session", str(self.root),
+                                            "--index", "0", "--execute"])
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(outputs[0])["ok"])
+        spy.assert_called_once_with(self.root, 0)
+
+    def test_do_go_with_form_controls_is_not_actionable(self):
+        raw = BODY.replace(b"<p>Mobile index",
+                           b"<p>Mobile index<input name=\"q\"/>")
+        def capture(url, profile, folder):
+            write_page(folder, url, raw)
+        page = agent_browser.open_page(HOME, self.root, capture_page=capture)
+        self.assertEqual(page["do_links"], [])
+
     def test_wml_script_and_binary_resource_links_rejected(self):
         for suffix in ("file.wmls", "file.wmlsc", "game.jar", "pic.png", "movie.3gp"):
             target, reason = evaluate_link(HOME, {"href": suffix})

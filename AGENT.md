@@ -43,6 +43,7 @@ Tools:
 | --- | --- | --- |
 | `wap_open` | `url`, `execute: true`, optional `profile` (`wap1`/`s60`) | Exactly one GET |
 | `wap_follow` | `session_id`, `link` index, `execute: true` | Exactly one GET, same origin |
+| `wap_go` | `session_id`, `index` from `do_links[]`, `execute: true` | One explicit verified no-input do/go GET |
 | `wap_read` | `session_id` | None |
 | `wap_back` | `session_id` | None; previous card or page |
 | `wap_card` | `session_id`, `index` from `cards[]` | None; select current deck card |
@@ -58,7 +59,7 @@ Every verified card can expose `form_preview`, with bounded `fields` (input and 
 
 ### WMLC support
 
-The pinned R5 parser supplies **per-card text** for both WML and supported WMLC/WBXML code page 0 decks. The Agent only exposes links belonging to the active card. Its `cards[]` and `card_links[]` fields describe offline card selection. This text is now surfaced under `text` with
+The pinned R5 parser supplies **per-card text** for both WML and supported WMLC/WBXML code page 0 decks. The Agent only exposes links belonging to the active card. Ordinary `links[]` and explicitly opt-in `do_links[]` are separate; the latter exclude postfields, scripts, mutation/auth targets and binary resources. Its `cards[]` and `card_links[]` fields describe offline card selection. This text is now surfaced under `text` with
 `format: "wmlc"`, bound to the captured raw body SHA-256.
 It is a **text extraction view**: no WMLScript, form submission or variable evaluation and no guarantee of full WMLC spec coverage. A separate bounded XML text utility remains available for inspection but the live Agent per-card view uses R5's validated card texts.
 
@@ -110,3 +111,9 @@ The R6 byte provenance, published WAP spec guidance, and detailed rejection poli
 ### v0.6.1 Compatibility decision
 
 The dry-run planner additionally refuses duplicate control names, stateful WML events and `setvar`, active option `onpick`, repeated option values, unsupported input masks, and ambiguous character-set behavior. Non-UTF-8 source documents need explicit UTF-8 `accept-charset`. No GET submission tool is available, even with the MCP `--allow-network` switch; the [compatibility report](docs/FORM_COMPATIBILITY.md) records why this remains disabled.
+
+### v0.7.0 Legacy do/go link navigation
+
+Public historical WML sometimes uses `<do><go>` controls rather than `<a>` to navigate between cards/decks. A narrow **no-input GET** subset is now exposed as `do_links[]` and can only be followed via CLI `go --session ... --index ... --execute` or MCP `wap_go(session_id, index, execute: true)` with the server's network opt-in. The R5 parser itself is frozen; the new candidate list is derived from inspected original WML/WMLC markup and bound to its captured byte hash. Existing `follow` never executes these controls. The form planner and form preview remain read-only, without POST or GET form submission.
+
+[Five-origin real WML compatibility results](docs/REAL_WORLD_COMPAT_20261029.md) include the successful GB2312 Blue G home-to-mobile-service path, a UC123 intermediary caveat, and clear limits (no live WMLC MIME or actual old hardware).

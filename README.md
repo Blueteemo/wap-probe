@@ -21,6 +21,7 @@ WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择�
 | 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
 | 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
 | 多卡片 WML/WMLC 阅读、页内 `#card` 索引及离线切换 | 已支持；当前卡片独立显示 |
+| 传统 `<do><go>` 无输入导航 | 已支持，独立 `do_links`，每次显式允许联网 |
 | 离线阅读/返回、最多 8 份网页、64 条历史动作 | 已支持 |
 | JSON CLI、本地 MCP stdio Agent 工具 | 已支持 |
 | WMLScript、表单 POST、Cookies/登录、HTML 页面渲染 | 暂不支持 |
@@ -62,7 +63,7 @@ wap-agent back --session ./evidence/session-01
 
 每次 `open` 或 `follow` 都要明确使用 `--execute`，最多发出一次公开 GET。程序不会自动重定向、跨域跳转、登录、携带 Cookie、提交表单或运行 JavaScript/WMLScript。
 
-JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`active_card_index`、`cards`、`card_links`、`links`、`form_preview`、`form_submission_supported`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
+JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`active_card_index`、`cards`、`card_links`、`links`、`do_links`、`form_preview`、`form_submission_supported`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
 
 ## MCP 接入（本地标准输入输出）
 
@@ -82,7 +83,7 @@ JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`t
 
 启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉启动参数即可让 MCP 仅能离线读取。
 
-MCP 提供五项工具：`wap_open`、`wap_follow`、`wap_read`、`wap_back`、`wap_card`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
+MCP 提供七项工具：`wap_open`、`wap_follow`、`wap_go`、`wap_read`、`wap_back`、`wap_card`、`wap_form_plan`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
 
 本服务为**仅限本地 stdio 的 MCP 2025-11-25 JSON-RPC 工具子集实现**，不宣称支持 Streamable HTTP 或所有可选 MCP 能力；也不会开放监听端口。
 
@@ -135,3 +136,18 @@ MCP 同步提供离线工具 `wap_form_plan(session_id, action, values)`，不�
 本轮增加 12 组离线兼容性测试。对重复控件名、`onevent` / `setvar` 等状态操作、选择项 `onpick`、重复选项值、`format` 掩码以及不确定的字符集处理，均采取**无法准确模拟则拒绝生成请求计划**的策略。GB2312 页面只有显式声明 `accept-charset="utf-8"` 时才可进入当前保守的 UTF-8 规划路径。**不开放 GET 表单实际提交**：方法为 GET 并不能保证服务端无副作用。
 
 完整兼容性矩阵及是否开放执行接口的决定见 [WML 表单兼容性报告](docs/FORM_COMPATIBILITY.md)。原有 CLI、MCP 阅读与卡片导航保持不变。
+
+### v0.7.0｜五个历史 WAP 站点实测与传统 `do/go` 导航
+
+本轮五个公开历史 WML 站点的首页与第二页均经实际 Agent 路径验证（HTTP 200）。其中 Blue G 首页采用 GB2312 和传统 `<do><go>` 操作，原有浏览器可以解码但不能访问目标二级页。现在针对**无输入、无脚本、无提交字段**的页面导航提供独立的 `do_links[]` 列表。
+
+与普通链接不同，必须从当前卡片的 `do_links[].index` 选取编号，并显式执行：
+
+```bash
+# 仅当当前 WML 页面确实提供 do_links[].index=0
+wap-agent go --session ./evidence/session-01 --index 0 --execute
+```
+
+MCP 对应 `wap_go(session_id, index, execute: true)`，服务器仍须开启 `--allow-network`。**这不是表单 GET 提交**：POST、`postfield`、动态 URL、WMLScript、明显修改状态的路径及二进制下载不进入可浏览候选。GET 仍可能存在服务端副作用，调用前需确认目标是公开只读页面。
+
+[五站真实兼容性记录](docs/REAL_WORLD_COMPAT_20261029.md)说明网页文本、导航类型和验证边界。五站的 HTTP/WML 实网成功**不代表 WMLC 实网、实体旧手机或 WSP/WDP 已完成验收**。

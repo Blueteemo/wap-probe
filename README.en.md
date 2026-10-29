@@ -28,6 +28,7 @@ The repository also preserves the frozen R5 WML/WBXML parser and the
 | WMLC/WBXML card text decoded via frozen R5 parser | Supported for tested WML code page 0 |
 | Safe, same-origin, GET-only link navigation | Supported; one request per step |
 | Multi-card WML/WMLC views and local `#card` navigation | Supported; current card only |
+| Legacy no-input `<do><go>` navigation | Supported via separate `do_links[]`, explicit network opt-in |
 | Offline read/back and session history | Supported; up to 8 fetched pages, 64 history actions |
 | JSON CLI and local MCP stdio tools | Supported |
 | WMLScript, POST/forms, cookies/auth, HTML rendering | Not supported |
@@ -75,7 +76,7 @@ credentials, cookies, form submissions, JavaScript or WMLScript execution.
 
 Responses include `ok`, `url`, `http_status`, `mime`, `format`,
 `text`, `text_available`, `active_card_index`, `cards`, `card_links`,
-`links`, `form_preview`, `form_submission_supported`, `sha256`, `cursor` and
+`links`, `do_links`, `form_preview`, `form_submission_supported`, `sha256`, `cursor` and
 `page_count`. Non-WML responses and errors are reported, not treated as
 valid content. Raw evidence in local sessions may include **Set-Cookie**;
 keep the entire session folder private and never commit it.
@@ -99,8 +100,8 @@ Configure your MCP-capable Agent to spawn a **local subprocess**:
 Adapt the JSON wrapper to your Agent's settings. The `--allow-network` flag
 only enables possible network use; **each** `wap_open` or `wap_follow` tool
 call must also set `execute: true`. Remove the flag for offline-only use.
-Five tools are exposed: `wap_open`, `wap_follow`, `wap_read`,
-`wap_back`, and `wap_card`. `wap_card` is offline-only: it selects an existing verified deck card using `session_id` and `index`. MCP sessions are ephemeral and referenced by opaque
+Seven tools are exposed: `wap_open`, `wap_follow`, `wap_go`, `wap_read`,
+`wap_back`, `wap_card` and `wap_form_plan`. `wap_card` is offline-only: it selects an existing verified deck card using `session_id` and `index`. MCP sessions are ephemeral and referenced by opaque
 `session_id` values (never arbitrary filesystem paths).
 
 The local, dependency-free server implements the tested MCP **2025-11-25
@@ -168,3 +169,18 @@ See [GET form planning and security policy](docs/FORM_GET_PLAN.md).
 ### v0.6.1 — Form compatibility and safety hardening
 
 The offline matrix now exercises duplicate control variables, WML stateful events and `setvar`, option `onpick`, duplicate choice values, input format masks, and source-charset uncertainty. The planner fails closed when it cannot reproduce the original device's form semantics. For GB2312 source documents it requires an explicit `accept-charset="utf-8"` on the GET action. **Actual GET form submission remains disabled:** GET alone does not prove a server operation is side-effect-free. See the [compatibility and execution-gate decision](docs/FORM_COMPATIBILITY.md). Existing JSON CLI, MCP, and card navigation continue unchanged.
+
+### v0.7.0 — Real-world five-origin WML compatibility
+
+The real Agent opened and followed public WML on five previously researched historical origins (HTTP 200 home and same-origin child for each). Blue G's GB2312 homepage primarily used no-input `<do><go>` controls rather than ordinary `<a>` links. Such narrowly eligible, verified navigation candidates are now exposed separately under `do_links[]`.
+
+Choose a **returned** `do_links[].index` and explicitly opt in:
+
+```bash
+# Only when the active card actually returns do_links[].index=0
+wap-agent go --session ./evidence/session-01 --index 0 --execute
+```
+
+MCP provides `wap_go(session_id, index, execute: true)`, also requiring server-side `--allow-network`. This is **not GET form submission**: no postfields, scripts, stateful inputs, dynamic targets, known mutation/auth URLs or executable/download resources are allowed. Even a candidate GET may have server-side effects; only opt in for public, benign read-only pages.
+
+See [five-origin compatibility results](docs/REAL_WORLD_COMPAT_20261029.md). No live WMLC MIME, real Nokia hardware, DSi, or WSP/WDP was verified in this sample.
