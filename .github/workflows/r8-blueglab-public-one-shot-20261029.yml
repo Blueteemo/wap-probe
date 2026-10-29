@@ -1,0 +1,82 @@
+name: R8 Blue G Lab public WML navigation check (one-shot)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/r8-blueglab-public-one-shot-20261029.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wap-origin-one-at-a-time
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify original R5 archive
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path,PurePosixPath
+          import hashlib,zipfile
+          p=Path('vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip')
+          expected='cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa'
+          if hashlib.sha256(p.read_bytes()).hexdigest()!=expected:raise SystemExit('R5 SHA mismatch')
+          with zipfile.ZipFile(p) as z:
+              for e in z.infolist():
+                  r=PurePosixPath(e.filename)
+                  if r.is_absolute() or '..' in r.parts or chr(92) in e.filename:raise SystemExit('R5 unsafe path')
+              z.extractall('.r5_unpacked')
+          PY
+      - name: Two verified homepage-derived public WML link attempts only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          for spec in "service:/m_service/default.wml" "downloads:/download/default.wml"; do
+            label="${spec%%:*}"
+            chosen="${spec#*:}"
+            if ! python -m wap_probe.pipeline \
+              --url http://wap.yuyangzhou.name/ --profile wap1 \
+              --prefer-path "$chosen" \
+              --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
+              --out "evidence/$label" --limit 1 --delay 2 --execute; then
+              echo "PIPELINE ERROR: $label"
+            fi
+            sleep 3
+          done
+      - name: Summarize safe outcomes
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          for label in ('service','downloads'):
+              f=list(Path('evidence',label).glob('001_*/run_report.json'))
+              if not f:
+                  print(label,'NO_REPORT')
+                  continue
+              r=json.loads(f[0].read_text())
+              print(label,r.get('stage'),'home=',r.get('home_capture'),'child=',r.get('child_capture'))
+          PY
+      - name: Save 3-day private evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-blueglab-${{ github.run_id }}
+          path: evidence/
+          retention-days: 3
+          if-no-files-found: warn
