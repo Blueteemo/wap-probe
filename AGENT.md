@@ -90,7 +90,7 @@ Historical evidence: [live Agent smoke](https://github.com/Blueteemo/wap-probe/a
 [WAP survey](docs/FINAL_FINDINGS_20261029.md),
 [frozen parser provenance](docs/R5_SOURCE.md).
 
-This repository is **private** pending historical source/license review.
+This is the **only official repository**. It remains **private** pending final approval for the project MIT license, third-party historical capture rights, and an in-place visibility change. Do not create a separate public repository, rewrite history, or silently relicense the archived external HTTP/WML evidence; see [publication readiness](docs/PUBLICATION_READINESS_20261029.md).
 
 ## Live MCP stdio acceptance
 

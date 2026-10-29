@@ -3,6 +3,27 @@
 **审查日期 / Reviewed: 2026-10-29**  
 **目标 / Goal: prepare for an eventual public, usable WAP Probe source repository; keeping it private indefinitely is NOT a product requirement.**
 
+## 发布核准事项 / Owner release approval (2026-10-30)
+
+**Engineering: PASS. Historical privacy screening: NO CONFIRMED SECRET MATCH. Redistribution/licensing: OWNER DECISION REQUIRED.**
+
+本项目正式方案只有一个：`Blueteemo/wap-probe` 保留全部研究历史，完成最后授权后直接由 Private 转为 Public；不建第二个仓库，不改写历史，也不替换冻结 R5 ZIP。本文件后文关于独立候选 B 的分析仅为历史技术记录，不再执行。
+
+已完成的独立核验：完整项目 395/395 通过；六项 GitHub Actions 工作流通过；完整历史常见凭据自动扫描未发现明确命中（唯一剩余个人路径提示是故意构造的测试值）；原始 R5 内层研究包有 27 份网页响应文件、去重后 15 种内容，另有两份 Kannel 来源的 WML 参考文档。未见实际账号、令牌或认证标头证据。**扫描不是对内容安全或再分发权的保证。**
+
+**拟采用 MIT，但尚未向代码作出许可授予。** 许可证只能覆盖所有者有权授权的项目源代码和文档（包括其原创 R5 解析器部分）；不能通过根目录许可证把从第三方网站保存的 HTTP/WML/HTML 响应、外部 Kannel 参考页面等变成项目自有版权。项目引用的 Lowband/WAP Labs 固定测试向量单独适用其原有 MIT 许可及已附带的 `tests/fixtures/LOWBAND_LICENSE.txt`。kXML WML token 表是参考来源；若后续识别出超出标准数字映射的实际源码复用，应按相应上游许可证保留署名和通知。参见 [R5 来源与分发边界](R5_SOURCE.md)。
+
+GitHub 的 Private→Public 切换会让保留的源码历史和 Actions 运行日志可供其他人查看；当前分支删除旧文件不能清除历史副本。[GitHub 官方可见性说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility)。因此真正的最后确认须同时覆盖 **项目 MIT 授权、保留历史研究网页内容的公开风险，以及直接转 Public** 三项，不能把一次“继续准备”的回复当成三项均已同意。
+
+发布执行条件（满足后一次性完成，而不是不断增加准备轮次）：
+
+1. 所有者确认可对本项目自行编写/授权的代码使用 MIT，并确定版权署名。
+2. 所有者看过并接受完整历史中少量第三方公开网页响应及两个 Kannel WML 参考的权利不确定性，或提出可验证的再分发依据；若拒绝承担这一历史内容风险，须先另行授权历史清理，不能直接公开。
+3. 所有者明确批准将**现有同一仓库**改为 Public。之后才添加正式顶层 LICENSE/必要通知并切换可见性；先前技术性 CI 成功不代表法律放行。
+
+当前状态仍为 **REVIEW_REQUIRED / Private**。不预先承诺归档内容已取得第三方许可，不将项目 MIT 扩展至第三方原始网页，不创建第二仓库。
+
+---
 ## 最新公开路线决定 / Active publication plan (2026-10-30)
 
 **只维护现有一个仓库：直接在 `Blueteemo/wap-probe` 原地公开。** 项目所有者明确不希望为了公开再维护两个仓库。本报告后文关于“方案 B / 干净独立公开版本”的历史试验属于保留的技术研究记录，**现已不再作为正式开源执行路线**；其构建脚本可留作内部维护辅助，不创建第二个 GitHub 仓库。原始 R5 ZIP、提交历史和研究证据继续保留，不擅自删除或重写。
