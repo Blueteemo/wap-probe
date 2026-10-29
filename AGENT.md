@@ -92,3 +92,18 @@ This repository is **private** pending historical source/license review.
 ## Live MCP stdio acceptance
 
 [One-shot run #40864597665](https://github.com/Blueteemo/wap-probe/actions/runs/40864597665) successfully tested the actual local MCP subprocess and JSON-RPC 2025-11-25 handshake, tools/list, `wap_open` (HTTP 200), `wap_follow` to `/0x541B.wml` (HTTP 200), and `wap_back` (offline). Text extraction returned 94 and 462 characters respectively. The smoke workflow was retired after verification; **regular CI remains offline-only**. The WMLC readable-text path is independently exercised against the pinned binary fixture in the offline unit suite.
+
+### v0.6.0: Offline GET form plans (no submission)
+
+The additional MCP tool `wap_form_plan` accepts `session_id`, an action index from the current card's `form_preview.actions`, and an object `values` of non-sensitive input strings. It returns a sanitized, offline-only plan with `request_sha256`, `source_sha256`, `target_origin`, `path`, `query_keys`, `review_required: true`, and `execution_supported: false`. **There is no form-submit or form-execute tool.**
+
+For the CLI, use a user-owned JSON file rather than shell arguments:
+
+```bash
+wap-agent form-plan --session ./evidence/session-01 --action 0 --values-file ./my-search-values.json
+```
+
+All proposals derive from captured bytes already checked by the R6 evidence gate and source-bound frozen R5 export. Only a literal same-origin GET target, explicit UTF-8 form postfields, defined plain text / single-select controls, non-sensitive public parameter names, and simple `$(name)` substitutions are considered. POST, WMLScript, `setvar`, dynamic hrefs, secrets, unsupported encodings, potentially state-changing endpoints, and actual network submission are excluded. No form values are written to the session; returned digests are **not** anonymization or consent.
+
+The R6 byte provenance, published WAP spec guidance, and detailed rejection policy are described in [FORM_GET_PLAN.md](docs/FORM_GET_PLAN.md).
+

@@ -24,6 +24,7 @@ The repository also preserves the frozen R5 WML/WBXML parser and the
 | Public HTTP/HTTPS GET, strict DNS/IP validation, no redirects | Supported |
 | WML text (UTF-8, GB2312/GBK, Big5) | Supported |
 | Read-only WML/WMLC form inspection | Inputs, select options, GET/POST actions, postfields and variable markers |
+| Offline GET form request planning | Validated/redacted dry-run only; no GET/POST submission |
 | WMLC/WBXML card text decoded via frozen R5 parser | Supported for tested WML code page 0 |
 | Safe, same-origin, GET-only link navigation | Supported; one request per step |
 | Multi-card WML/WMLC views and local `#card` navigation | Supported; current card only |
@@ -147,3 +148,20 @@ not redistribute the repository or frozen archive until reviewed.
 ### Read-only form structure preview (v0.5.0)
 
 The active card's `form_preview` exposes bounded WML/WMLC input fields, select/option labels, go actions, postfield names, GET/POST method and variable-presence indicators. **Password/token defaults, raw submitted values and action query values are never returned.** The preview does not execute actions, substitute variables, or generate GET/POST requests. `submission_available` and `form_submission_supported` remain false. WML `<go>` destinations are deliberately excluded from regular Agent navigation, even for GET methods; GET alone does not prove an operation is safe.
+
+## v0.6.0: Offline GET form request planning
+
+The `wap-agent form-plan` command validates a **selected GET form action** from the currently verified WML/WMLC card. It supports conservative plain text input, single-select options, `$(name)` postfields, UTF-8 query encoding and strict public same-origin checks. **It never makes a network request and cannot submit any form.**
+
+Place non-sensitive values in a local JSON file (for example `{"q":"calligraphy","genre":"puzzle"}`), then use an existing, verified session with an appropriate form:
+
+```bash
+wap-agent form-plan --session ./evidence/session-01 --action 0 --values-file ./my-search-values.json
+```
+
+Output includes `request_sha256`, `source_sha256`, `query_keys`, `target_origin`, `path`, `risk`, and `review_required`, but never the input values. A deterministic SHA-256 fingerprint is **not** secure anonymization or a submission authorization token. Select `--action` from the active card's `form_preview.actions`.
+
+An offline-only MCP tool, `wap_form_plan(session_id, action, values)`, is also available; no form-execution tool is exposed. The planner rejects POST, dynamic action URLs, cross-origin destinations, suspicious state-changing or sensitive paths, sensitive parameters, unrecognized variable syntax, invalid select values, and unsupported input types. Support is intentionally restricted to simple GET `postfield` references in the form `$(name)`. **GET does not guarantee side-effect-free server behavior; an eligible plan is not approval to execute it.**
+
+See [GET form planning and security policy](docs/FORM_GET_PLAN.md).
+

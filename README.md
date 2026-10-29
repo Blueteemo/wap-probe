@@ -17,6 +17,7 @@ WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择�
 | 公开 HTTP/HTTPS GET、公网 DNS/IP 验证、禁用自动重定向 | 已支持 |
 | WML 文本（UTF-8、GB2312/GBK、Big5） | 已支持 |
 | WML/WMLC 表单结构预览（仅只读） | 输入框、选择项、GET/POST 动作、postfield、变量标记 |
+| GET 表单离线请求计划 | 已支持保守字段校验和脱敏预览，不执行 GET/POST |
 | 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
 | 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
 | 多卡片 WML/WMLC 阅读、页内 `#card` 索引及离线切换 | 已支持；当前卡片独立显示 |
@@ -112,3 +113,20 @@ CI 会验证冻结 R5 SHA-256，并运行现有代码测试及不改动的 **139
 ### 表单结构只读预览（v0.5.0）
 
 读取卡片时，JSON 的 `form_preview` 会列出 WML/WMLC 的 `input`、`select` / `option` 和 `go` / `postfield` 结构：字段类型、选项的显示标签、GET/POST 方法、是否使用变量，以及是否包含预填值。**预填内容、令牌、密码和 postfield 的具体值不提供。** 所有表单的 `submission_available` 都是 `false`，`form_submission_supported` 固定为 `false`；没有提交或构造 GET/POST 请求的接口。即使 WML 的 `go` 写了 `method=get`，也不会混入普通可跟随链接。页面内容仍视为不可信数据。
+
+## v0.6.0：离线 GET 表单请求计划
+
+在当前已验证的 WML/WMLC 卡片中，`wap-agent form-plan` 可以检查 **明确指定的 GET 表单动作**，校验普通输入框、单选项、`postfield` 变量引用、UTF-8 查询编码与同源公开目标，生成脱敏计划。**它不会向网站发送请求，不能提交表单。**
+
+先将要填写的非敏感字段保存在本地 JSON 文件（例如 `{"q":"中国书法","genre":"puzzle"}`），再对已打开且包含相应表单的会话执行：
+
+```bash
+wap-agent form-plan --session ./evidence/session-01 --action 0 --values-file ./my-search-values.json
+```
+
+结果包含 `request_sha256`、`source_sha256`、`query_keys`、`target_origin`、`path`、`risk` 和 `review_required`，**不会回显提交值，也不保留填写内容**。普通 SHA-256 指纹可能被猜测攻击，不能视作匿名化或授权令牌。`--action` 必须来自当前卡片的 `form_preview.actions`。
+
+MCP 同步提供离线工具 `wap_form_plan(session_id, action, values)`，不需要启用联网权限，但仍不提供表单执行工具。严格拒绝 POST、动态目标 URL、非同源、明显修改状态的路径、敏感字段或路径、复杂变量表达式、未声明或不匹配的选项以及超出限制的请求。现阶段仅支持简单文字输入、单选及 `$(name)` 形式的 GET `postfield`。**GET 可能导致服务端状态变化，计划通过不代表可以安全执行。**
+
+规范与具体约束参见 [GET 表单计划与安全策略](docs/FORM_GET_PLAN.md)。
+

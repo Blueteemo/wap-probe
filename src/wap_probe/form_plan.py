@@ -85,6 +85,8 @@ def _resolve_plan(source_url: str, card, action_index: int,
     target = urljoin(source_url, href)
     validate_url(target)
     parsed = urlsplit(target)
+    if PRIVATE.search(parsed.path):
+        raise ValueError("Sensitive form target path is not accepted")
     if DANGEROUS.search(parsed.path):
         raise ValueError("Potential state-changing GET endpoint")
     if parsed.query or parsed.fragment:

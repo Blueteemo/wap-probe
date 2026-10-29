@@ -86,6 +86,8 @@ class GetFormPlanTests(unittest.TestCase):
         for path in ["/delete.wml", "/logout.wml", "/save", "/payment.wml"]:
             self._bad_action(path, "Potential state-changing")
         self._bad_action("https://elsewhere.example.org/search.wml", "rejected by public")
+        self._bad_action("/secret.wml", "Sensitive form target path")
+        self._bad_action("/account/private-id", "Sensitive form target path")
 
     def _bad_action(self, href, expected):
         raw = SEARCH.replace(b"/search.wml", href.encode("ascii"))
