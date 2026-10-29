@@ -148,3 +148,39 @@ The expanded *repository* scanner added cookie/authorization headers, sensitive 
 The selected original **28 non-offline research/manual-source workflow jobs** from the initial 103-run history snapshot have now been reviewed via their retained job logs. No signatures for the selected token/private-key, authorization-header, cookie-header or non-example email categories were found. Earlier "personal home" indicators were traced to either GitHub-runner system paths or relative `/home/` paths in web evidence fixtures; the updated source audit now reports only the deliberate fake-path redaction test. This is still not an assertion that every ordinary historical CI log and third-party captured response is redistributable.
 
 **No tag, Release, top-level license, public visibility change or R5 replacement has been made.** A full source archive is technically viable; publishing it is still conditional on the rights checks described above.
+
+
+---
+
+## 2026-10-30 第六轮：外部页面原始内容与备选发布包
+
+[CI #40932453885](https://github.com/Blueteemo/wap-probe/actions/runs/40932453885) 已完成整个冻结 R5 ZIP 及其内层研究包的路径级清单，不输出抓取正文：
+
+| 内容类别（保守候选分类） | 文件实例 | 解压后字节 | 不同 SHA-256 内容 |
+| --- | ---: | ---: | ---: |
+| 内层在线网页响应及取证报告 | **35** | **162,163** | **23** |
+| 内层外部 Kannel WML 参考文档 | **2** | **1,334** | 2 |
+| 差异测试生成的结果 | 8 | 3,274 | 待逐项认定 |
+| 其他历史报告及取证材料 | 14 | 38,829 | 待逐项认定 |
+| 参考样本及测试 fixtures | 34 | 5,589 | 待逐项认定 |
+| 其他归档数据 | 2 | 4,994 | 待逐项认定 |
+
+以上 **35 项不是 35 份第三方代码、独立网站或独立网页**，其中既有响应正文，也有工具生成的报告，且存在重复。原始来源集中在内层 deepseek_review/evidence 下的 live_walk_bs0dd、live_walk_kannel、online_candidates、online_international、wapit 及 wmlc_guesses 系列。另有 deepseek_review/diff/sources/kannel_main.wml 与 kannel_news.wml 两个单独的外部参考 WML。抓取数据的 SHA-256 证明本地完整性，不代表获得网页内容再分发许可。
+
+**方案 A 的具体未决问题**是原始外站内容随 Git 历史一起公开。根目录补充 MIT 许可证也不能自动为独立第三方网页授权。当前没有足够证据认定所有历史响应均可公开传播，故仍不得一键转 Public。代码来源、外部页面文字和自动生成的取证记录应分开判断。
+
+### 可运行的私有干净源码预演 / Functional private fallback
+
+已新增 scripts/build_clean_source_candidate.py，仅在新目录中构建用于内部验证的候选版本，不修改任何冻结原件或仓库历史。构建时完整 R5 ZIP 仍须验证已固定的 SHA-256，随后只复制两个真正执行的解析器模块及一份合成 WMLC 回归样本，生成独立小 ZIP、校验和与 SOURCE_CANDIDATE_MANIFEST.json；同时保留当前正式 Python 源码、安装描述及 CLI/MCP 离线冒烟程序。原始外站响应、嵌套 DeepSeek 审查包和完整 139 项历史 R5 测试不随候选包输出。
+
+在已授权访问的私有完整仓库中，可执行：
+
+    python scripts/build_clean_source_candidate.py --out /path/to/new-private-candidate
+
+此命令拒绝覆盖已有目录，生成的 manifest 明确标识 publication_authorized=false；**生成技术样本绝非取得公开许可**。解析器、WBXML token 表、合成样本的权利链与本项目顶层许可证仍需明确。
+
+[CI #40933042366](https://github.com/Blueteemo/wap-probe/actions/runs/40933042366) 已在现有 source-archive job 里，从干净候选目录全新安装 Python 包并实际执行三项 CLI 及 MCP 离线端到端冒烟。**6/6 Job 全绿**，现有项目 **255 项测试加冻结 R5 的 139 项测试，共 394/394 通过**。候选小 ZIP 的可复现 SHA-256 为 b9bfde58cf4e41887b9d9cceadd0f222baf0060bd50db438b1cf05f608d43860。
+
+KXML 的 WML token 表可在 Android 历史源文件中核对，其参考的数值表与项目中 Python token 表之间的具体表达、许可和署名要求需做独立判断，不应把标准代码点的对应关系本身当成源代码拷贝的证明。来源：https://android.googlesource.com/platform/dalvik.git/+/f6c387128427e121477c1b32ad35cdcaa5101ba3/libcore/xml/src/main/java/org/kxml2/wap/wml/Wml.java
+
+**当前推荐**：方案 A 保留原仓库历史优先，但必须解决其历史外站取证资料分发权；方案 B 已从理论备选变成已通过真实安装测试的内部候选，如果 A 无法合理清理权利障碍，则可继续按 B 准备真正可运行的独立公开项目。两种方案在正式公开前均需项目所有者确定可授权的源码范围及许可证。没有实施可见性变更、LICENSE 授权、Release、Tag、版本号变更、历史重写或 R5 修改。

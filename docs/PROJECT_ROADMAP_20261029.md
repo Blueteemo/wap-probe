@@ -64,3 +64,12 @@ This estimate rewards completed, tested **MVP user workflows**, not count of com
 ### Source-only release preflight
 
 The existing offline test workflow now includes a Git-source-archive install check, using an extracted `git archive HEAD` instead of the checked-out working tree. The source-archive job **passed** in [run #40923216137](https://github.com/Blueteemo/wap-probe/actions/runs/40923216137), confirming that the source-only release is installable without hidden development state. A wheel or PyPI release remains unsupported until the frozen parser and license/distribution contract are addressed. No tag or GitHub Release is created by this job.
+
+
+## 2026-10-30 发布预演阶段更新
+
+- POSIX 下新创建的 HTTP/WSP 会话和取证目录默认采用 0700，增补了三项权限回归测试。冻结原始研究资料仍不改动。
+- 历史 R5 嵌套包有 35 项在线取证或报告候选（23 种不同内容）及两个外部 Kannel WML 文档。它们属于方案 A 的独立分发权限审查，并不代表所有项目代码禁止公开。
+- 私有干净源码候选构建器 scripts/build_clean_source_candidate.py 已完成并经 CI 端到端验证：只包含正式 Python 包、两份 R5 解析器与一份合成 WMLC 样本，不含原站历史响应和内层研究包。生成物未取得公开分发许可。
+- [CI #40933042366](https://github.com/Blueteemo/wap-probe/actions/runs/40933042366) 六项 Job 通过，**255 当前测试 + 139 冻结 R5 测试 = 394 项通过**，也验证了 Ubuntu、macOS 托管安装与干净源码候选的 CLI/MCP 冒烟。
+- 工程目标依旧是高质量免 root Agent 阅读器，不扩大协议功能。优先评估原仓库公开方案 A；若历史外站资料无法清理权限，采用可运行的独立 B。个人 Apple Silicon Mac 实机验收和正式许可证仍未完成。

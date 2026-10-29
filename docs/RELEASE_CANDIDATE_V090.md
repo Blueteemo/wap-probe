@@ -102,3 +102,8 @@ An additional job in the existing `tests.yml` workflow creates a plain `git arch
 ## v1.0 本地证据权限补强（2026-10-30）
 
 新创建的 HTTP 阅读会话、WSP 原始证据目录、导入后的 WSP 会话与单独 capture 输出目录使用 `mode=0700`。在 POSIX 系统中，只允许当前用户进入这些新建目录，避免常见 `umask 022` 下默认的其他用户可读权限。已有目录不会被擅自修改，目录所有者仍需控制父目录权限及分享、备份方式；Windows ACL 不在此 POSIX 测试保证内。新增独立回归测试，WSP 原始证据与冻结 R5 ZIP 不修改。
+
+
+### 2026-10-30 安全权限与源码发行候选补充
+
+新建 POSIX HTTP/WSP 会话、采集和证据目录现在默认使用 0700，新增三项权限测试。现有目录不会被悄悄修改。现有 CI 的 source-archive job 已额外验证从精简私有源码候选全新安装并进行三命令入口、WML/WMLC 和 MCP 离线功能验收；此候选不包括历史网站响应或内层研究归档，也**不具有公开分发许可**。[Run #40933042366](https://github.com/Blueteemo/wap-probe/actions/runs/40933042366) 共 6/6 Job 通过，本轮完整现行回归总数 255 + 139 = 394。
