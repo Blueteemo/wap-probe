@@ -78,3 +78,40 @@ jobs:
           export PATH="$PWD/.smoke-venv/bin:$PATH"
           unset PYTHONPATH
           .smoke-venv/bin/python scripts/smoke_clean_install.py
+
+  macos-clean-install:
+    name: macOS clean editable install (Python 3.12)
+    runs-on: macos-15
+    needs: offline
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install and verify rootless CLI/MCP on a clean macOS runner
+        run: |
+          python -m venv .smoke-venv
+          .smoke-venv/bin/python -m pip install -e .
+          export PATH="$PWD/.smoke-venv/bin:$PATH"
+          unset PYTHONPATH
+          .smoke-venv/bin/python scripts/smoke_clean_install.py
+
+  publication-audit:
+    name: Historical source and public-readiness triage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Inventory licenses, frozen R5 archive and historical secret indicators
+        run: python scripts/audit_publication.py
