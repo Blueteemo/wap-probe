@@ -42,6 +42,14 @@ class PrivateCandidateTests(unittest.TestCase):
                 (root / "SOURCE_CANDIDATE_MANIFEST.json").read_text("utf-8"))
             self.assertIs(manifest["publication_authorized"], False)
             self.assertIs(manifest["excluded_historical_site_captures"], True)
+            self.assertEqual(manifest["provenance_review_document"],
+                             "THIRD_PARTY_REFERENCES.md")
+            self.assertEqual(manifest["sample_original_r5_research_log"],
+                             "probe/RESEARCH_LOG.md")
+            provenance = (root / "THIRD_PARTY_REFERENCES.md").read_text("utf-8")
+            self.assertIn("86-byte", provenance)
+            self.assertIn("Stefan Haustein", provenance)
+            self.assertIn("not a LICENSE", provenance)
             self.assertEqual(set(manifest["portable_regression_files"]), EXPECTED_TESTS)
             self.assertEqual({p.name for p in (root / "tests").iterdir()},
                              EXPECTED_TESTS)

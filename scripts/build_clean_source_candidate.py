@@ -30,6 +30,8 @@ KEEP = (
     PREFIX + "fixtures/binary_portal.wmlc",
 )
 
+PROVENANCE = "# Third-party references and code provenance (internal candidate)\n\n**This is a factual provenance record, not a LICENSE, copyright assignment,\npermission to publish, or claim of independent legal clearance.**\n\n## Frozen parser and synthetic WMLC fixture\n\nThe private original R5 ZIP, pinned by SHA-256 in the candidate manifest,\ncontains probe/RESEARCH_LOG.md. The 2026-10-28 v0.3 research notes expressly\ndescribe implementing wap_wbxml.py as a \"strict subset decoder\" using WAP\nWBXML/WML semantics, OMA identifiers, and Android kXML WML token tables.\nThose notes also record construction of an 86-byte binary WMLC test sample\nwith two cards and an in-page #next link. The candidate contains that\n86-byte sample and only two R5 Python parser files, each byte-for-byte\nretained from the frozen archive.\n\nThese original research notes document a project-origin narrative; they are\nnot an independent third-party similarity audit or a legal rights grant.\nThe owner must verify that model-assisted contributions and subsequent\nmodifications are theirs to authorize.\n\n## Standards and implementation references\n\n- WAP Forum WBXML specification:\n  https://www.w3.org/1999/06/NOTE-wbxml-19990624/\n- WAP Forum WML token specification:\n  https://www.wapforum.org/what/technical/spec-wml-19990616.pdf\n- Android historical kXML2 Wml.java (token-table reference):\n  https://android.googlesource.com/platform/dalvik.git/+/f6c387128427e121477c1b32ad35cdcaa5101ba3/libcore/xml/src/main/java/org/kxml2/wap/wml/Wml.java\n- kXML2 source licensing:\n  https://github.com/kobjects/kxml2/blob/master/license.txt\n  kXML2's related Wbxml.java states copyright (c) 2002, 2003\n  Stefan Haustein and contains a permissive notice with attribution\n  obligations where code or substantial protected expression is reused:\n  https://android.googlesource.com/platform/dalvik.git/+/f6c387128427e121477c1b32ad35cdcaa5101ba3/libcore/xml/src/main/java/org/kxml2/wap/Wbxml.java\n\nProtocol-defined numeric token assignments alone do not establish that\nthe project's decoder implementation is copied from kXML2. Conversely,\nthis documentation does not prove independent expression or rule out\nattribution obligations. Before public release, confirm whether any\nprotected source/table expression was incorporated and preserve the full\napplicable upstream notice when required.\n\n## External interoperability materials excluded from this candidate\n\n- WAP Labs / wapcurl: separately installed tooling in original R5 work,\n  not shipped as a Rust or other source-code dependency.\n- libwbxml: separately invoked reference tool, not bundled here.\n- WAP Labs Lowband independent reference corpus: belongs to the full\n  private repository with its own retained license, not this candidate.\n- Third-party website captures, historic source-response snapshots and\n  DeepSeek nested review files: not shipped.\n\n## Release gate\n\nNo top-level project license has yet been chosen or granted by the owner.\nDo not treat this provenance file, any upstream reference, passing tests,\nor the presence of a binary fixture as permission to publish.\n"
+
 README = """# WAP Probe - private clean-source candidate
 
 NOT LICENSED OR AUTHORIZED FOR PUBLIC DISTRIBUTION.
@@ -49,6 +51,9 @@ Requires Python 3.10+ and curl for optional public HTTP reading.
     python -m pip install -e .
     python scripts/smoke_clean_install.py
     python -m unittest discover -s tests -v
+
+See THIRD_PARTY_REFERENCES.md for the origin of the R5 parser and fixture,
+and for unresolved attribution and release-permission questions.
 
 MCP is offline by default (wap-mcp). Use --allow-network only for approved
 anonymous public HTTP GETs and execute: true on each requested network call.
@@ -92,6 +97,8 @@ def build(target: Path) -> dict:
             data = source.read(name)
             if not 0 < len(data) <= 128_000:
                 raise ValueError("Invalid allowed R5 member")
+            if name.endswith("/fixtures/binary_portal.wmlc") and len(data) != 86:
+                raise ValueError("Synthetic R5 sample differs from original research log")
             entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             entry.compress_type = zipfile.ZIP_DEFLATED
             entry.external_attr = 0o644 << 16
@@ -109,6 +116,7 @@ def build(target: Path) -> dict:
     code = code.replace(old_sha, 'ARCHIVE_SHA256 = "' + candidate_hash + '"')
     agent_path.write_text(code, encoding="utf-8")
     (target / "README.md").write_text(README, encoding="utf-8")
+    (target / "THIRD_PARTY_REFERENCES.md").write_text(PROVENANCE, encoding="utf-8")
 
     manifest = {
         "schema": "wap-probe-private-clean-source-candidate-v1",
@@ -117,6 +125,8 @@ def build(target: Path) -> dict:
         "reduced_archive_sha256": candidate_hash,
         "reduced_archive_members": members,
         "excluded_historical_site_captures": True,
+        "provenance_review_document": "THIRD_PARTY_REFERENCES.md",
+        "sample_original_r5_research_log": "probe/RESEARCH_LOG.md",
         "portable_regression_files": list(PORTABLE_TESTS),
         "outstanding_rights": [
             "R5 parser code and WBXML token table",

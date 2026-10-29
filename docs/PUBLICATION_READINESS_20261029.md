@@ -209,3 +209,12 @@ KXML 的 WML token 表可在 Android 历史源文件中核对，其参考的数�
 5. **个人设备验收**：托管 macOS 15 / Python 3.12 已通过；用户个人 Apple Silicon Mac 尚未复现，发布说明必须区分这两种验证。
 
 结论仍为 REVIEW_REQUIRED。完整仓库、精简候选均尚未获准发布；本次没有添加 LICENSE、发布 Tag/Release、公开仓库或重写历史。
+
+
+### 2026-10-30 最小源码候选的来源证据补强
+
+直接读取原始 R5 ZIP 内的 `probe/RESEARCH_LOG.md` 后，得到两条此前尚未充分引用的第一手记录：其一，原研究者明确称 `wap_wbxml.py` 是依据公开 WBXML/WML 语义、OMA 标识和 Android kXML token 表编写的 strict subset decoder；其二，自行构造了 **86 字节两卡片 WMLC 样本**。候选保留的 `binary_portal.wmlc` 为 86 字节，构建器现在也检查这一与日志一致的大小。
+
+对照来源包括 [WAP WBXML 规范](https://www.w3.org/1999/06/NOTE-wbxml-19990624/)、[WML token 规范](https://www.wapforum.org/what/technical/spec-wml-19990616.pdf) 与 [Android kXML `Wml.java`](https://android.googlesource.com/platform/dalvik.git/+/f6c387128427e121477c1b32ad35cdcaa5101ba3/libcore/xml/src/main/java/org/kxml2/wap/wml/Wml.java)。kXML2 具有宽松许可证及原作者署名要求；项目复用规范编号本身并非代码拷贝的证据，但有表达性复用时仍需保留正确许可证/署名。这是来源证据更充分，**不是**自动确认所有权。
+
+精简候选现在附有独立的 `THIRD_PARTY_REFERENCES.md`，明确说明上述来源、未随包分发的 WAP Labs / libwbxml / 原始网站取证材料，以及尚需所有者授权的部分。此文件不会代替顶层 LICENSE。方案 B 由此具有可供接手者直接阅读的权属审查记录；方案 A 的历史第三方网页内容障碍不受此改进影响。
