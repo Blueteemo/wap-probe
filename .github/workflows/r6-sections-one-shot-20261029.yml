@@ -1,0 +1,100 @@
+name: R6 public sections and domestic WML check (one-shot)
+
+# Automatic once on creation of this exact workflow file, not scheduled.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/r6-sections-one-shot-20261029.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wap-origin-one-at-a-time
+  cancel-in-progress: false
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify immutable R5 SHA-256 and safely extract
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import zipfile
+          from pathlib import Path, PurePosixPath
+          source = Path('vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip')
+          expected = 'cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa'
+          if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+              raise SystemExit('Frozen R5 checksum mismatch')
+          with zipfile.ZipFile(source) as z:
+              for entry in z.infolist():
+                  p = PurePosixPath(entry.filename)
+                  if p.is_absolute() or '..' in p.parts or chr(92) in entry.filename:
+                      raise SystemExit('Unsafe archive path')
+              z.extractall('.r5_unpacked')
+          PY
+      - name: Bounded public GET survey (4 origins, at most 8 GETs)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          # Actual child GET is derived ONLY from a newly parsed homepage.
+          # No credentials, POST, cookies, automatic redirect, auth path or downgrade.
+          function try_site {
+            local label="$1" url="$2" preferred="$3"
+            local extra=()
+            if [[ -n "$preferred" ]]; then extra+=(--prefer-path "$preferred"); fi
+            echo "::group::$label"
+            if ! python -m wap_probe.pipeline \
+              --url "$url" --profile wap1 \
+              --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
+              --out "evidence/$label" --limit 1 --delay 2 \
+              --execute "${extra[@]}"; then
+              echo "Collector execution failure for $label; inspect artifact."
+            fi
+            echo "::endgroup::"
+            sleep 3
+          }
+          try_site tx-services 'https://tx.com.cn/' '/editor/cs/official.do'
+          try_site tx-novels 'https://tx.com.cn/' '/read/cs/goodBook.do'
+          try_site ip138-legacy 'http://qq.ip138.com/train/search_train.wml' ''
+          try_site shufaji-legacy 'http://wap.shufaji.com/' ''
+      - name: Print safe status summary without raw response headers
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          results=[]
+          for target in ('tx-services','tx-novels','ip138-legacy','shufaji-legacy'):
+              files=list(Path('evidence',target).glob('001_wap1/run_report.json'))
+              if not files:
+                  results.append(dict(target=target,stage='NO_REPORT',grade='PENDING'))
+                  continue
+              x=json.loads(files[0].read_text())
+              results.append(dict(target=target,stage=x.get('stage'),
+                  home_capture=x.get('home_capture'),child_capture=x.get('child_capture'),
+                  A_origin=x.get('A_origin'),A_navigation=x.get('A_navigation'),
+                  grade='PENDING'))
+          Path('evidence/summary.json').write_text(json.dumps(results,indent=2)+'\n')
+          print(json.dumps(results,indent=2))
+          PY
+      - name: Keep private raw evidence only 3 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-sections-20261029-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 3
