@@ -73,3 +73,8 @@ The existing offline test workflow now includes a Git-source-archive install che
 - 私有干净源码候选构建器 scripts/build_clean_source_candidate.py 已完成并经 CI 端到端验证：只包含正式 Python 包、两份 R5 解析器与一份合成 WMLC 样本，不含原站历史响应和内层研究包。生成物未取得公开分发许可。
 - [CI #40933042366](https://github.com/Blueteemo/wap-probe/actions/runs/40933042366) 六项 Job 通过，**255 当前测试 + 139 冻结 R5 测试 = 394 项通过**，也验证了 Ubuntu、macOS 托管安装与干净源码候选的 CLI/MCP 冒烟。
 - 工程目标依旧是高质量免 root Agent 阅读器，不扩大协议功能。优先评估原仓库公开方案 A；若历史外站资料无法清理权限，采用可运行的独立 B。个人 Apple Silicon Mac 实机验收和正式许可证仍未完成。
+
+
+### 2026-10-30：便携测试矩阵补齐
+
+方案 B 的私有源码候选现包含五份本地/合成回归测试，在独立候选目录运行 **79/79 通过**；另加一项完整仓库内的候选校验测试，保护文件白名单、SHA-256、清单与禁止覆盖约束。完整历史 R5 研究包仍未改动。[CI #40934175269](https://github.com/Blueteemo/wap-probe/actions/runs/40934175269) 六个任务均通过。下一阶段是原始网页响应的版权/再分发审查、原创源码许可证授权与必要的个人 Mac 试用，而非增加 WAP 协议功能。

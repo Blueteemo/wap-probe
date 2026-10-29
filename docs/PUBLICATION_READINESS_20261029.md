@@ -184,3 +184,28 @@ The selected original **28 non-offline research/manual-source workflow jobs** fr
 KXML 的 WML token 表可在 Android 历史源文件中核对，其参考的数值表与项目中 Python token 表之间的具体表达、许可和署名要求需做独立判断，不应把标准代码点的对应关系本身当成源代码拷贝的证明。来源：https://android.googlesource.com/platform/dalvik.git/+/f6c387128427e121477c1b32ad35cdcaa5101ba3/libcore/xml/src/main/java/org/kxml2/wap/wml/Wml.java
 
 **当前推荐**：方案 A 保留原仓库历史优先，但必须解决其历史外站取证资料分发权；方案 B 已从理论备选变成已通过真实安装测试的内部候选，如果 A 无法合理清理权利障碍，则可继续按 B 准备真正可运行的独立公开项目。两种方案在正式公开前均需项目所有者确定可授权的源码范围及许可证。没有实施可见性变更、LICENSE 授权、Release、Tag、版本号变更、历史重写或 R5 修改。
+
+
+### 独立便携测试矩阵与最终发布放行事项（2026-10-30）
+
+上轮仅对精简源码候选执行 CLI/MCP 冒烟。现在构建器已纳入以下五份**不依赖私有网页响应**的本地与合成数据回归测试：
+
+- test_agent_browser.py：冻结解析器只读装载、离线页面和权限检查
+- test_collector.py：URL/DNS/IP/HTTP 请求安全规则、目录权限
+- test_delivery_contract.py：CLI 与 8 项 MCP 工具契约、敏感错误脱敏
+- test_navigation.py：同源安全导航、链接选择和校验
+- test_security_regressions.py：恶意链接、证据篡改与禁止操作
+
+这些文件在候选清单中显式列出。新增 test_clean_source_candidate.py 只在完整私有仓库的回归集里运行，验证候选的三个 R5 ZIP 成员、每个成员的 SHA-256、便携测试名单、私有发布标记及拒绝覆盖已有目录。该构建器测试不会混入独立候选。
+
+[CI #40934175269](https://github.com/Blueteemo/wap-probe/actions/runs/40934175269) 的 **6 个 Job 全部通过**，候选环境中的 **79/79 项便携回归测试通过**。这不等于完整研究测试集，也不是对任意真实网站或个人 Mac 的实测。完整仓库继续运行其自身测试及冻结 R5 的 139 项原始测试。
+
+**最终人工放行仍需分别处理：**
+
+1. **原创项目代码与历史 R5 解析器权属**：由项目所有者确认其对相关 AI 辅助代码、本地 DeepSeek 修改、所用 WBXML token 表及合成测试样本具备可开放的权利。发现实质第三方拷贝则应履行原始许可证或替换。
+2. **历史外站取证资料**：对方案 A 中嵌入 Git 历史的第三方网页响应与 WML 参考文档，取得合理的可分发依据；如无法确认，不能仅从 main 删除后就宣称历史已净化。
+3. **许可证与通知**：仅对有授权权利的项目代码选择许可证（例如 MIT），并对经确认需保留的第三方材料分开署名或附原许可；未经所有者确认不能自动创建顶层 LICENSE。
+4. **公开路线**：A 适合权属齐备并可公开完整历史时；B 已具备真正可安装和可单独回归的技术基础，但仍需处理代码本身授权，不自动升级为 Public。
+5. **个人设备验收**：托管 macOS 15 / Python 3.12 已通过；用户个人 Apple Silicon Mac 尚未复现，发布说明必须区分这两种验证。
+
+结论仍为 REVIEW_REQUIRED。完整仓库、精简候选均尚未获准发布；本次没有添加 LICENSE、发布 Tag/Release、公开仓库或重写历史。

@@ -107,3 +107,8 @@ An additional job in the existing `tests.yml` workflow creates a plain `git arch
 ### 2026-10-30 安全权限与源码发行候选补充
 
 新建 POSIX HTTP/WSP 会话、采集和证据目录现在默认使用 0700，新增三项权限测试。现有目录不会被悄悄修改。现有 CI 的 source-archive job 已额外验证从精简私有源码候选全新安装并进行三命令入口、WML/WMLC 和 MCP 离线功能验收；此候选不包括历史网站响应或内层研究归档，也**不具有公开分发许可**。[Run #40933042366](https://github.com/Blueteemo/wap-probe/actions/runs/40933042366) 共 6/6 Job 通过，本轮完整现行回归总数 255 + 139 = 394。
+
+
+### 2026-10-30：独立候选回归验收
+
+私有干净源码候选不再只有 smoke：随包复制五份无历史捕获依赖的合成/本地回归测试，在其自身独立的 Python 3.12 环境中通过 **79/79**。完整仓库另有一项候选打包回归测试，验证最小归档与校验清单。最终 [CI #40934175269](https://github.com/Blueteemo/wap-probe/actions/runs/40934175269) 通过全部六个 Job。这不赋予候选或完整仓库公开分发许可。
