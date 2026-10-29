@@ -166,3 +166,10 @@ MCP 的 `wap_open` 同样支持 `profile: "wmlc"`（仍须 `execute: true` 及�
 五个历史站点的 WMLC 优先实测全部得到文本 WML（其中书法集第一次请求失败，单次复核成功）；本轮 **0/5 获得第三方 HTTP WMLC 响应**。另通过仅限测试环境的本机 HTTP 服务器，验证正确 MIME 的二进制 WMLC 能被 R5 解析为两张包含中文文本的卡片；这属于**受控 HTTP 联调**，不是第三方实网 WMLC 证据。
 
 [完整协商与测试报告](docs/WMLC_HTTP_COMPAT_20261029.md)。不支持 HTML、WMLScript 或泛化的 WBXML MIME 自动识别；未添加 root、代理绕行或自动提交。
+
+
+### v0.7.2｜WBXML/WML 1.3 独立参考对照
+
+引入 WAP Labs / Lowband（MIT 许可、来源提交固定）的 23 个 WBXML 参考样本作为离线回归：12 个有效样本的**卡片结构、正文及非默认属性一致**，11 个错误样本均被冻结 R5 拒绝。Rust 参考输出会补齐部分 WML DTD 默认属性，而 R5 不会，因此**不宣称 XML 字符串完全相同或符合完整 WML 规范**。这次是在我们自己的 CI 中对照另一项目预先规定的预期结果，**没有在 CI 中同时运行 Rust 解码器**，也没有找到第三方实网 WMLC 站点。
+
+样本与许可声明、测试方法见 [独立 WBXML 对照报告](docs/WBXML_INDEPENDENT_REFERENCE_20261029.md)。冻结 R5 原件保持不变。

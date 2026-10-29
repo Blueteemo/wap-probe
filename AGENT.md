@@ -123,3 +123,8 @@ Public historical WML sometimes uses `<do><go>` controls rather than `<a>` to na
 The `wap_open` MCP tool now accepts `profile: "wmlc"` alongside `wap1` and `s60`. This does not relax network permissions or change the existing profiles. The WMLC-preferred `Accept` header only negotiates a media type; the actual observed MIME and R5 verification decide whether the result is `format: "wmlc"` or `format: "wml"`.
 
 The frozen binary fixture has been served by a local-only HTTP test server and verified through real HTTP response bytes and unmodified R5 parsing. Five public WML origins were retested under the WMLC-preferred profile; each ultimately returned text WML, **not verified WMLC**. The controlled loopback test does not justify claiming third-party WMLC live support. [Evidence and test matrix](docs/WMLC_HTTP_COMPAT_20261029.md).
+
+
+### v0.7.2 Reference WBXML regression tests
+
+The offline suite now pins 23 MIT-attributed Lowband WML 1.3 expected-output cases, including valid binary/literal/charset/extension examples and deliberately malformed data. The 12 valid cases agree with frozen R5 on the Agent's **semantic reading view** after explicitly enumerated WML DTD default-attribute normalization, while 11 invalid cases reject. This is not bit-identical XML, full WML conformance, or execution of the Rust reference decoder inside our CI. See [independent reference report](docs/WBXML_INDEPENDENT_REFERENCE_20261029.md) and `tests/test_lowband_reference.py`.

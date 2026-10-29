@@ -199,3 +199,10 @@ MCP `wap_open` also accepts `profile: "wmlc"`, still requiring per-call `execute
 All five previously verified public origins returned **text WML, not binary WMLC**, when the WMLC-preferred profile was tested. One initial failed call to the calligraphy site succeeded on a single targeted retry. In separate offline CI, a real loopback HTTP server serves the frozen binary WMLC fixture under its correct MIME; the unmodified R5 parser decodes two cards including Chinese text. **This is a controlled transport fixture, not verified third-party live WMLC.**
 
 See the [WMLC HTTP evidence and limitations](docs/WMLC_HTTP_COMPAT_20261029.md). Native WSP/WDP, arbitrary WBXML, scripts and real device conformance are outside this scope.
+
+
+### v0.7.2 — Independent WBXML/WML 1.3 reference comparison
+
+A pinned, MIT-attributed **23-case** subset of Lowband's independent Rust WBXML fixture expectations is now part of offline CI. Frozen R5 matched **12/12 valid cases** on card structure, text and non-default attributes, and rejected **11/11 invalid cases**. The reference Rust decoder expands known WML DTD defaults that R5 omits, so **raw XML output is not identical**, and full WML/DTD conformance is **not** claimed. We compared against the reference repository's declared expected outcomes; we did **not** build and execute Rust in the same CI, or discover third-party live HTTP WMLC.
+
+The fixture subset has pinned upstream commit and full MIT attribution: [independent comparison report](docs/WBXML_INDEPENDENT_REFERENCE_20261029.md). The frozen R5 source itself remains unchanged.
