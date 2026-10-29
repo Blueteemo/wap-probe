@@ -80,7 +80,11 @@ def parse_r5(body: bytes, content_type: str, *, probe_dir: Path) -> dict:
             if not isinstance(href, str) or not isinstance(method, str):
                 raise ValueError("Malformed R5 link fields")
             links.append({"href": href, "method": method.upper()})
-        cards.append({"id": card.get("id"), "links": links})
+        text = card.get("text", "")
+        if not isinstance(text, str):
+            raise ValueError("R5 card text is not a string")
+        cards.append({"id": card.get("id"), "links": links,
+                      "text": text[:12000]})
 
     return {
         "schema": R5_SCHEMA,

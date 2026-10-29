@@ -1,3 +1,3 @@
-"""Offline evidence inspection helpers for WAP Probe R6."""
+"""Rootless WAP evidence tools and local Agent interfaces."""
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"

@@ -1,144 +1,102 @@
-# WAP Probe — rootless WML reader for Agents
+# WAP Probe
 
-**The original goal is back:** give a local coding Agent a safe, usable interface
-to read traditional WML pages, follow a verified public link and inspect
-navigation history without root or browser automation.
+**无需 root 的 Agent 专用 WML/WMLC 阅读工具，兼顾传统 WAP 实网取证与研究。**
 
-**Working scope:** direct HTTP(S) WML with UTF-8/GB2312 text, safe same-origin
-GET links and JSON output; R5 also validates WMLC decks, though readable WMLC
-text and native WSP/WDP are not implemented in the new Agent view.
+**简体中文** | [English](README.en.md)
 
-**[Agent interface and copy-paste commands](AGENT.md)** ·
-[2026 survey result](docs/FINAL_FINDINGS_20261029.md) ·
-[Research-grade capture](docs/LIVE_CAPTURE.md)
+WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择页面中真实存在的链接继续浏览，并离线返回历史页面。它提供 **JSON 命令行**和**本地 MCP stdio 服务**，无需 root、浏览器自动化、Docker 或常驻网络服务器。
 
-```sh
-PYTHONPATH=src python -m wap_probe.agent_browser open \
-  'http://wap.shufaji.com/' --out /tmp/wap-visit-1 --execute
-PYTHONPATH=src python -m wap_probe.agent_browser follow \
-  --session /tmp/wap-visit-1 --link 0 --execute
-PYTHONPATH=src python -m wap_probe.agent_browser back --session /tmp/wap-visit-1
+原有冻结 R5 解析引擎、2026 年国内传统 WAP 站点调查和验证证据仍保留在同一仓库。
+
+> **当前仍为私有开发仓库，尚未获准公开再分发。** 随附 R5 历史源码及依赖的许可证／来源尚待审核；请勿因能看到代码就认为已正式开源。
+
+## 功能与支持范围
+
+| 功能 | 当前状态 |
+| --- | --- |
+| 公开 HTTP/HTTPS GET、公网 DNS/IP 验证、禁用自动重定向 | 已支持 |
+| WML 文本（UTF-8、GB2312/GBK、Big5） | 已支持 |
+| 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
+| 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
+| 离线阅读/返回、最多 8 页会话历史 | 已支持 |
+| JSON CLI、本地 MCP stdio Agent 工具 | 已支持 |
+| WMLScript、表单 POST、Cookies/登录、HTML 页面渲染 | 暂不支持 |
+| 原生 WSP/WDP 运营商网关、诺基亚实体机兼容 | 未实现／未验证 |
+
+对于二进制 WMLC，当前只能读取 R5 已覆盖的标签、卡片和文本，包含变量或复杂标签的页面可能无法完整还原。**可读正文不等于浏览器视觉渲染、完整标准符合性，更不等于老手机实机验收通过。**
+
+## 环境与安装
+
+- Python 3.10+、PATH 中有 `curl`
+- 需要联网时具备公开 DNS/互联网访问能力
+- 普通用户权限即可，**不要求 sudo/root**
+- 需要包含 `vendor/r5/` 的**完整源码检出**；单独安装不含该归档的 wheel 无法运行 R5 解析器
+
+在仓库根目录执行：
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+wap-agent --help
+wap-mcp --help
 ```
 
-**Status:** Rootless Agent JSON interface has passed offline unit tests and a
-**real two-request public WML browsing smoke test**: [run #40859035071](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071).
-It opened the shufaji homepage (HTTP 200, 7 safe links), then followed its
-actual /0x541B.wml link (HTTP 200) and extracted readable text.
-Native WSP/WDP remains outside the Agent reader's supported scope.
-The repository remains private pending license/provenance review.
-No sudo, Python third-party dependencies, cookies, auth or automatic crawling.
+也可以不安装，直接使用 `PYTHONPATH=src python3 -m wap_probe.agent_browser` 和 `PYTHONPATH=src python3 -m wap_probe.agent_mcp`。
 
----
+## Agent JSON 命令行
 
-## Historical research and validation infrastructure
+```bash
+wap-agent open 'http://wap.shufaji.com/' --out ./evidence/session-01 --execute
+wap-agent read --session ./evidence/session-01
+wap-agent follow --session ./evidence/session-01 --link 0 --execute
+wap-agent back --session ./evidence/session-01
+```
 
-WAP Probe 是用于传统 WAP 协议研究、WML/WMLC 解析、HTTP 证据采集与验证、离线回放及互操作测试的 Python 工程。
+`follow --link` 的编号必须来自当前页面的 `links` 数组；上面的 `0` 只是示例，不保证它就是需要访问的链接。
 
-**当前工程状态：R8 在线 WML 存活调查已结项；8 个重点历史入口中有 5 个取得同源 HTTP/WML 双页证据，且经冻结 R5 和独立 WaveNav 复核。实体旧机／原生 WSP/WDP 仍未测试。**
+每次 `open` 或 `follow` 都要明确使用 `--execute`，最多发出一次公开 GET。程序不会自动重定向、跨域跳转、登录、携带 Cookie、提交表单或运行 JavaScript/WMLScript。
 
-**[查看 2026-10-29 最终清单、等级与设备兼容性边界](docs/FINAL_FINDINGS_20261029.md)**
+JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`links`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
 
-**冻结 R5 已入库，R6 离线证据层已接入真实 R5 解析器。** R5 源码及其原有测试保存在不可变 ZIP 归档中，由 GitHub Actions 验证 SHA-256 后解包运行；这不是在线站点的 A 级验收。
+## MCP 接入（本地标准输入输出）
 
-## 工程结构
+支持 MCP 的 Agent 可以把下面的配置作为本地子进程启动示例（按客户端实际配置结构调整）：
 
-- `vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip`：冻结的原始 R5 工程，包含源码、WBXML/WMLC 测试样本和原有 139 项测试。
-- `src/wap_probe/evidence_gate.py`：离线校验 HTTP 响应头、正文、元数据、SHA-256、内容长度及 IP 一致性。
-- `src/wap_probe/r5_adapter.py`：读取已验收的 R6 证据，**实际调用冻结 R5 的 `inspect_markup()`**，生成 `r6-r5-export-v1`；过滤需要输入的 WML 导航链接。
-- `src/wap_probe/navigation.py`：挑选公开的同源 GET 二级页面候选，不自动发起网络请求。
-- `src/wap_probe/bridge.py`：把首页和二级页的证据与 R5 解析结果关联，输出可审计的状态，不会自动授予 A 级。
-- `tests/`：R6 单元测试、真实 R5 适配测试，以及离线两页集成测试。
-- `.github/workflows/tests.yml`：验证源 ZIP，运行当前 R6 和冻结 R5 测试。仅 main 推送和手动触发，不使用 PR 自动测试。
+```json
+{
+  "mcpServers": {
+    "wap-probe": {
+      "command": "python3",
+      "args": ["-m", "wap_probe.agent_mcp", "--allow-network"],
+      "env": {"PYTHONPATH": "/ABSOLUTE/PATH/TO/wap-probe/src"}
+    }
+  }
+}
+```
 
-## 运行测试
+启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉启动参数即可让 MCP 仅能离线读取。
 
-Python 3.10+，离线执行，不需要公网连接。首先解包 R5（请先核对 SHA-256，详见 [R5 来源与迁移说明](docs/R5_SOURCE.md)）：
+MCP 提供四项工具：`wap_open`、`wap_follow`、`wap_read`、`wap_back`。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
+
+本服务为**仅限本地 stdio 的 MCP 2025-11-25 JSON-RPC 工具子集实现**，不宣称支持 Streamable HTTP 或所有可选 MCP 能力；也不会开放监听端口。
+
+## 测试与历史研究
 
 ```bash
 python3 -m zipfile -e vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip .r5_unpacked
 PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
   python3 -m unittest discover -s tests -v
-
-for part in probe discovery integrations; do
-  (cd ".r5_unpacked/wap-probe-live-discovery-r5/$part" && \
-    python3 -m unittest discover -p 'test_*.py' -q)
-done
 ```
 
-当前 GitHub Actions 对提交执行了 **93 项 R6/适配/集成测试 + 139 项冻结 R5 测试，均通过**。这些测试使用预置或合成数据，不是在线网站检测。
+CI 会验证冻结 R5 SHA-256，并运行现有代码测试及不改动的 **139 项 R5 原测试**。CI 默认**不会访问真实第三方网站**。
 
-## 真实 R5 → R6 离线执行
+相关资料：[Agent 使用说明](AGENT.md) · [R5 冻结来源](docs/R5_SOURCE.md) · [2026 国内 WAP 存活调查](docs/FINAL_FINDINGS_20261029.md) · [真实双页实测记录](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071)。
 
-假设 `evidence/home` 中已经有符合 R6 数据规范的 `metadata.json`、`headers.bin` 和 `body.bin`：
+## 安全边界及项目关系
 
-```bash
-PYTHONPATH=src python3 -m wap_probe.r5_adapter \
-  --capture evidence/home \
-  --r5-dir .r5_unpacked/wap-probe-live-discovery-r5/probe \
-  --out evidence/home/r5_export.json
+来自网站的文字始终是不可信的数据，不能作为 Agent 指令执行。本工具只接受公开 DNS 域名，限制响应体大小、验证并绑定公网 IP、禁止自动重定向和凭证操作；不要用于内部或需要认证的系统。
 
-PYTHONPATH=src python3 -m wap_probe.bridge \
-  --home evidence/home \
-  --home-r5 evidence/home/r5_export.json
-```
+**WAP Probe** 面向本地 Agent 与协议研究；规划中的 **WAPDS** 则是另一个面向 Nintendo DSi 实体掌机的图形化浏览器项目，不混用代码与交付目标。原生 WSP/WDP 暂列独立研究方向，必须通过受控、获授权的网关环境开展。
 
-出现 `CHILD_GET_REQUIRED` 只表示已找到可供人工或受控采集器验证的二级 GET 候选；**并不表示已发生请求**。
-
-## 验收和安全边界
-
-- 仅对公开无登录目标进行安全的 GET 请求；HTTP 与 HTTPS 独立，禁止自动跟随重定向。
-- `WML_CAPTURED_NEEDS_R5` 表示证据通过字节级检查，但尚待实际解析；`TWO_PAGE_EVIDENCE_MATCHED` 表示两份离线证据/解析出口一致，**不自动授予 A-origin 或 A-navigation PASS**。
-- R5 XML/WBXML 解析成功并非完整 WML DTD 一致性或真实设备兼容性证明。
-- WAP Labs 网关输出属于单独的互操作证据，不能替代直连原站响应。
-- 目前 R6 导航桥接只使用首页第一张卡片上的链接；`#card` 有界可达性遍历与显式启用的真实 HTTP 采集器均已添加。
-- CI 不主动访问任何真实 WAP 站点，不启动 Deep Research。
-
-许可证尚未确定，在审核项目来源与再分发条件前不改为公开仓库。
-
-## R6 原站验证（须显式授权联网）
-
-只预览 32 项 HTTP/HTTPS × 两类旧手机 UA 的候选采集矩阵：
-
-```sh
-PYTHONPATH=src python3 -m wap_probe.pipeline --matrix
-```
-
-在具备直连公网能力的环境中，单站点实际采集和 R5 两页验证：
-
-```sh
-PYTHONPATH=src python3 -m wap_probe.pipeline --url http://tx.com.cn/ \
-  --profile wap1 --out evidence/tx-wap1 --execute
-```
-
-`--execute` 为必选的联网开关；默认仅预览任务。参见 [R6 采集说明](docs/LIVE_CAPTURE.md)。CI 不自动扫描站点；原采集器的 A 级机器字段仍为 PENDING，人工 HTTP/WML 证据分级参见 [最终清单](docs/FINAL_FINDINGS_20261029.md)。
-
-
-### 2026-10-29: 两处国内 WML 双页实网取证
-
-- **书法集** `http://wap.shufaji.com/`：Nokia 7110 与 S60v3 两种画像均取得首页 HTTP 200 `text/vnd.wap.wml`；由首页真实链接进入 `/0x541B.wml`（“君”字）也为 HTTP 200 WML。HTTPS 独立采集连接超时，不可混称支持 HTTPS。
-- **517名站／我要起名网** `http://wap.517ming.com/`：首页及从页面实际链接访问 `/helian-xing.wml` 均为 HTTP 200 `text/vnd.wap.wml`。两站有互相引用的友情链接与按服务器时间变化的“报时”；站点维护者是否仍在更新正文尚未验证。
-- **天下网**：HTTPS WML 首页持续有效，但“服务”二级页返回 302 至 HTTP 访客入口，“小说”二级页返回 502；均不能记为可用 WML 二级页面。
-- **IP138 历史 `.wml` 路径**：HTTP 301 至 HTTPS；HTTPS 又 302 至 `dnsdblookup.com`，所以当前精确路径没有 WML 取证，不代表整个 IP138 已停运。
-
-取证运行：[第一次四入口](https://github.com/Blueteemo/wap-probe/actions/runs/40846429748)、
-[复核与补充](https://github.com/Blueteemo/wap-probe/actions/runs/40846746719)。
-原始私有工件仅保留三天，**不可把 Set-Cookie 等原始响应头提交到仓库**。
-各站首页与二级页的原始 WML 都通过了冻结 R5 及独立 XML 结构解析，但正式 A-origin/A-navigation 仍标记 PENDING，等待独立 WAP 引擎交叉复核和人工签署。
-
-
-### R7 独立引擎交叉复核（2026-10-29）
-
-使用 **固定提交 `9cd7ab97dc6752fc1616feb3505a58603f6a45df` 的 WAP Labs／WaveNav Rust 引擎**，对既有 R6 GitHub Actions 工件中的 **6 份原始 WML 正文字节**校验 SHA-256 后进行独立加载、卡片识别及渲染。
-
-- 书法集 `http://wap.shufaji.com/`：Nokia 7110 与 S60v3 画像下的首页和“君”字二级页，共 **4/4 通过**；
-- 我要起名网 `http://wap.517ming.com/`：Nokia 7110 画像下的首页和“赫连”姓详情页，共 **2/2 通过**；
-- 独立 WaveNav 的 **6/6 加载与渲染均成功**，原始数据 SHA-256 **6/6 一致**；
-- 两站已有真实 HTTP 200 + WML 首页与同源子页 GET 记录、冻结 R5 解析记录和本轮独立 WaveNav 记录。可标注为**国内 HTTP WML 双页证据已确认**，但尚非实体设备／原生 WSP/WDP 验收。
-
-独立复核：[Actions #40847596595](https://github.com/Blueteemo/wap-probe/actions/runs/40847596595)；完整验收范围及每页哈希见 [R6/R7 采集说明](docs/LIVE_CAPTURE.md)。这次 **未对目标网站发出新请求**，只重放原有私有证据。
-
-**验收口径：** `A-origin` / `A-navigation` 机器状态仍保留 `PENDING`，直到另外补足所需的传输/设备和最终签署条件；不能把 WaveNav 的离线解析成功外推成 Nokia 实机上网或 WSP/WDP 通过。
-
-### 真实 HTTPS 样本的导航排除策略
-
-2026-10-28 首次 HTTPS 采集得到 `tx.com.cn` 首页 HTTP 200、WML 1.1、6,943 字节并由冻结 R5 解析出一张卡片。首页第一条 `/in/fltin_t.jsp?...type=login` 为登录/注册入口，返回 HTTP 302；它不是公开二级内容的有效验收样本。R6 现在排除明显的登录/注册 URL 路径和操作参数，优先尝试首页后续公开 GET 链接。这不保证后续链接一定返回 WML，二级响应仍需独立验证。访问行为仍限制为 GET、不发送登录表单、不跟随重定向。
+**许可证：**尚待对历史 R5 源码与依赖完成来源及再分发审核。在审核完成之前不公开发布仓库和冻结归档。

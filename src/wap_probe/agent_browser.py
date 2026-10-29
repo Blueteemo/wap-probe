@@ -89,6 +89,12 @@ def page_view(page_dir: Path) -> dict:
     if result["format"] == "wml":
         result["text"] = _safe_xml_text((page_dir / "body.bin").read_bytes(),
                                         metadata["content_type"])
+    else:
+        # R5 already decoded the original WBXML; its export is bound to the
+        # exact raw SHA-256, and the same export is validated above.
+        result["text"] = "\n".join(
+            card["text"] for card in record["cards"] if card["text"]
+        )[:MAX_TEXT]
     result["text_available"] = result["text"] is not None
     result["card_count"] = record["card_count"]
     for card in record["cards"]:

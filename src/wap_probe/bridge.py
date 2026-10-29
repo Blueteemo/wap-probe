@@ -57,7 +57,11 @@ def read_r5_export(export_path, capture_dir):
             total_links += 1
             if total_links > 1024:
                 raise ValueError("Too many links")
-        validated_cards.append({"id": card.get("id"), "links": parsed_links})
+        card_text = card.get("text", "")
+        if not isinstance(card_text, str) or len(card_text) > 12000:
+            raise ValueError("Invalid R5 card text")
+        validated_cards.append({"id": card.get("id"), "links": parsed_links,
+                                "text": card_text})
     return {"source_sha256": actual_sha, "card_count": len(cards),
             "cards": validated_cards, "links": validated_cards[0]["links"]}
 
