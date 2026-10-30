@@ -24,6 +24,19 @@ SHA，且旧的 GitHub Actions/PR 引用仍可能指向先前对象；必须另�
 
 ---
 
+## 完整备份与网页响应逐项复核完成（2026-10-30）
+
+原有 **单一 Private 仓库** 的发布前快照已通过独立 ZIP SHA-256、Git bundle 恢复、`git fsck --full --no-reflogs` 以及冻结 R5 原 ZIP SHA-256 检查。私有完整备份（含当时全部 96 个可达提交、源文件、R5 研究原件及恢复说明）和逐项审查文档已保存到使用者的私人资料库，未发布公网链接。备份 ZIP SHA-256：`9e269bda468c2c4f14ac05220a3c6e169d39fa512f1a897ce22c2779ea804a02`，备份快照 HEAD：`8d31179b4dc094c4df98daae79e5fd13445cbe3d`。此时间点后的文档/CI 清理提交不包含在该冻结快照中，仍保留在 GitHub 私有仓库。
+
+逐项按实际响应体完整 SHA-256 去重：27 个原始外部采样 `.bin` 实例对应 **15 种不同正文**，其中 **4 种 HTTP 200 WML**（Kannel 两份、bs0dd 两份），**7 种 HTTP 200 HTML/XHTML 正文**，**4 种 HTTP 403/404/415 的错误/拒绝响应**；另有两份 Kannel WML 外部参考副本，其中 `kannel_main.wml` 与上述 WML 200 完全重合，`kannel_news.wml` 为额外内容。此划分依据原记录的 MIME、HTTP 状态及实际响应体内容；未重新访问站点。
+
+按去重正文扫描未发现常见 Cookie / Authorization 首部、电子邮件样式或 PEM 私钥头；其中一种 XHTML 样本（两个重复实例）带网页表单结构，**不是已知用户凭据**。本扫描只检查选定模式，并不代表所有内容安全或取得再分发许可。
+
+**审查建议**：所有原始外站响应只留在私人备份，对外保留采集 URL、时间、响应码、MIME、原始长度、完整 SHA-256、重放/解析结果和自行构造的合成 fixtures。由于完整 R5 ZIP 已存在于既有 Git 历史，当前版本删除一个文件并不能阻止旧历史公开后被读取；若要让该唯一仓库保持为原地址又不公开原始响应，需要得到所有者对针对性历史清理/重写的明确单独授权。清理会改动提交 SHA，也不能保证消除外部缓存或旧克隆。
+
+用于制作私有备份的临时 Actions Job 已在上传、存档和复核之后移除；没有留下定期导出历史档案的工作流。**仍未修改冻结 R5 原件、正式授权 LICENSE、改变 Private 状态或改写 Git 历史。**
+
+---
 ## 发布核准事项 / Owner release approval (2026-10-30)
 
 **Engineering: PASS. Historical privacy screening: NO CONFIRMED SECRET MATCH. Redistribution/licensing: OWNER DECISION REQUIRED.**
