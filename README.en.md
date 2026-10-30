@@ -10,8 +10,9 @@ It offers a JSON command-line interface and a local **MCP stdio** server.
 There is no privileged service, external API, browser automation, or
 automated site crawler.
 
-The repository also preserves the frozen R5 WML/WBXML parser and the
-2026 Chinese WAP website survey.
+The repository includes the R5 WML/WBXML parser and synthetic regression
+fixtures. Full historical web response archives are kept in a separate
+private backup, not bundled with the intended public source tree.
 
 > **Publication plan: keep `Blueteemo/wap-probe` as the only maintained repository and make it public in place once cleared.** No separate public fork/repository is planned. The repository remains private until the archived third-party response material, source licensing, and visibility switch receive explicit approval. See the [publication-readiness audit](docs/PUBLICATION_READINESS_20261029.md).
 
@@ -112,7 +113,7 @@ remote transport is opened.
 ## Reproduce offline tests
 
 ```bash
-python3 -m zipfile -e vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip .r5_unpacked
+python3 -m zipfile -e vendor/r5/R5_Public_Runtime_Test_Sources.zip .r5_unpacked
 PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
   python3 -m unittest discover -s tests -v
 ```

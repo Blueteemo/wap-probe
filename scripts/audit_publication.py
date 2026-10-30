@@ -15,7 +15,7 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = ROOT / "vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip"
+ARCHIVE = ROOT / "vendor/r5/R5_Public_Runtime_Test_Sources.zip"
 LICENSE_FILENAMES = {"license", "license.txt", "license.md", "copying",
                      "copying.txt", "notice", "notice.txt", "unlicense"}
 SENSITIVE = {
@@ -194,6 +194,13 @@ def main() -> None:
                   findings=suspicious, inventory=inventory, privacy=privacy,
                   materials=materials, archived_bodies=archived_bodies)
     objects = _git("rev-list", "--objects", "--all").decode("utf-8", "replace").splitlines()
+    # Historical raw website responses must not remain reachable from public refs.
+    original_zip_blob_sha = "815970e84330421a6ca761fa4b0aa6b28cd4125c"
+    legacy_reachable = any(line.split(" ", 1)[0] == original_zip_blob_sha
+                           for line in objects)
+    if legacy_reachable:
+        raise SystemExit("Historic raw-capture R5 ZIP remains reachable in Git history")
+
     blobs = 0
     archive_blobs = 0
     archived_paths = set()
@@ -262,7 +269,8 @@ def main() -> None:
         "potential_credential_match_locations": sorted(
             set(label for label, _ in suspicious))[:30],
         "automated_publication_decision": "REVIEW_REQUIRED",
-        "reason": "No automated scan proves reuse and redistribution rights for frozen historical source or all Git history",
+        "original_capture_zip_git_blob_reachable": legacy_reachable,
+        "reason": "No automated scan proves reuse and redistribution rights for original source or all historical Git text",
     }
     print("PUBLICATION_AUDIT " + json.dumps(outcome, ensure_ascii=False, sort_keys=True))
     for entry in sorted(inventory, key=lambda p: p["path"]):

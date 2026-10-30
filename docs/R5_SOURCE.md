@@ -1,3 +1,33 @@
+# R5 source, reproducibility and private archive boundary
+
+**In-place public-release LOCAL REHEARSAL ONLY (not yet published).**
+
+The original immutable research ZIP with full history (SHA-256
+`cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa`)
+remains intact in the independently verified **private** backup. It is not
+present in the proposed public Git history or current source tree. The
+replacement `vendor/r5/R5_Public_Runtime_Test_Sources.zip` contains 36
+members: the original R5 Python source and tests, project-created synthetic
+fixtures, two local source components for discovery/integration, and the
+source-compatible WML normative test vector. It excludes the nested DeepSeek
+archive, all third-party raw web response bytes, historical reports and Kannel
+reference snapshots. SHA-256:
+`1e58db1addf1cfa3cfb605d68ada00574c2b3f4be3664770e0ea19c2b0dde643`.
+
+`wap-agent`, `wap-mcp`, and `wap-wsp-lab` continue working with this parser.
+Local rehearsal: 255 current-source tests passed; among the R5 139 cases,
+132 passed and 7 skip by design, due to private, omitted web-response evidence.
+This is NOT an assertion that the 139 original full-archive cases passed on
+sanitized sources without skips. Full research archive has not been deleted
+from private preservation. Original R5 functions remain byte-identical,
+except two archived test wrappers now skip their private-evidence cases.
+
+The original source history is documented below for scholarly context;
+references to the original frozen ZIP below describe the **private historical
+source**, not a file available in the proposed public Git tree.
+
+---
+
 # Frozen R5 source and R6 integration
 
 The original, full R5 archive is tracked at:

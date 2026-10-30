@@ -49,7 +49,7 @@ Do not relabel the separate unvetted `wbxml_samples/` corpus as standards confor
 需完整源码及冻结 R5 归档：
 
 ```bash
-python3 -m zipfile -e vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip .r5_unpacked
+python3 -m zipfile -e vendor/r5/R5_Public_Runtime_Test_Sources.zip .r5_unpacked
 PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
   python3 -m unittest discover -s tests -p 'test_lowband_reference.py' -v
 ```

@@ -20,17 +20,17 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Verify immutable R5 and unpack
+      - name: Verify sanitized R5 source and unpack
         run: |
           python - <<'PY'
           import hashlib
           import pathlib
           import zipfile
-          archive = pathlib.Path("vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip")
-          expected = "cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa"
+          archive = pathlib.Path("vendor/r5/R5_Public_Runtime_Test_Sources.zip")
+          expected = "1e58db1addf1cfa3cfb605d68ada00574c2b3f4be3664770e0ea19c2b0dde643"
           actual = hashlib.sha256(archive.read_bytes()).hexdigest()
           if actual != expected:
-              raise SystemExit(f"Frozen R5 SHA-256 mismatch: {actual}")
+              raise SystemExit(f"Sanitized R5 SHA-256 mismatch: {actual}")
           destination = pathlib.Path(".r5_unpacked")
           with zipfile.ZipFile(archive) as z:
               for entry in z.infolist():
@@ -38,13 +38,13 @@ jobs:
                   if item.is_absolute() or ".." in item.parts or "\\" in entry.filename:
                       raise SystemExit("Unsafe R5 archive path")
               z.extractall(destination)
-          print("Frozen R5 archive SHA-256 verified and extracted")
+          print("Sanitized R5 archive SHA-256 verified and extracted")
           PY
       - name: Compile current Python sources
         run: python -m compileall -q src tests
       - name: Run R6 and real R5 adapter tests
         run: python -m unittest discover -s tests -v
-      - name: Run frozen R5 original tests
+      - name: Run R5 regression tests (historical capture cases skipped)
         run: |
           set -eu
           for component in probe discovery integrations; do
@@ -105,18 +105,6 @@ jobs:
           unset PYTHONPATH
           .release-venv/bin/python scripts/smoke_clean_install.py
 
-      - name: Install private clean-source fallback and check real CLI/MCP
-        run: |
-          set -eu
-          python scripts/build_clean_source_candidate.py --out "$RUNNER_TEMP/wap-probe-clean-candidate"
-          cd "$RUNNER_TEMP/wap-probe-clean-candidate"
-          python -m venv .candidate-venv
-          .candidate-venv/bin/python -m pip install -e .
-          export PATH="$PWD/.candidate-venv/bin:$PATH"
-          unset PYTHONPATH
-          .candidate-venv/bin/python scripts/smoke_clean_install.py
-          .candidate-venv/bin/python -m unittest discover -s tests -v
-
   macos-clean-install:
     name: macOS clean editable install (Python 3.12)
     runs-on: macos-15
@@ -137,44 +125,6 @@ jobs:
           unset PYTHONPATH
           .smoke-venv/bin/python scripts/smoke_clean_install.py
 
-
-  one-time-private-prepublication-backup:
-    name: One-time private prepublication Git bundle
-    # One-off archive handoff: download the resulting artifact into private Drive,
-    # then remove this temporary job before any public visibility change.
-    if: "${{ github.event_name == 'push' && contains(github.event.head_commit.message, 'backup: private prepublication Git bundle') }}"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Bundle complete locally reachable Git history and immutable R5
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/wap-prepublication"
-          git bundle create "$RUNNER_TEMP/wap-prepublication/wap-probe-20261030.bundle" --all
-          git bundle verify "$RUNNER_TEMP/wap-prepublication/wap-probe-20261030.bundle" > "$RUNNER_TEMP/wap-prepublication/bundle-verify.txt" 2>&1
-          cp vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip "$RUNNER_TEMP/wap-prepublication/FROZEN_R5_20261028.zip"
-          git rev-parse HEAD > "$RUNNER_TEMP/wap-prepublication/HEAD.txt"
-          git rev-list --all --count > "$RUNNER_TEMP/wap-prepublication/commit-count.txt"
-          (
-            cd "$RUNNER_TEMP/wap-prepublication"
-            sha256sum wap-probe-20261030.bundle FROZEN_R5_20261028.zip > SHA256SUMS.txt
-          )
-          printf '%s\\n' 'PRIVATE ARCHIVE — not for public distribution' 'Contains full prepublication repository history and frozen R5; preserve privately. Restore using git clone ./wap-probe-20261030.bundle new-dir. Historical captured website content has not been cleared for redistribution.' > "$RUNNER_TEMP/wap-prepublication/README-PRIVATE.txt"
-      - name: Transfer archive to private backup storage only
-        uses: actions/upload-artifact@v4
-        with:
-          name: PRIVATE-wap-probe-prepublication-20261030
-          path: ${{ runner.temp }}/wap-prepublication/
-          retention-days: 1
-          if-no-files-found: error
-          compression-level: 6
 
   publication-audit:
     name: Historical source and public-readiness triage

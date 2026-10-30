@@ -19,8 +19,8 @@ from wap_probe.evidence_gate import verify_folder
 from wap_probe.navigation import evaluate_link
 from wap_probe.r5_adapter import parse_capture
 
-ARCHIVE_NAME = "WAP_Probe_WAP_Labs_Interop_R5_20261028.zip"
-ARCHIVE_SHA256 = "cb98d2cc060cfe775a8adf99162160c7651c306a534f3770bbb7c356034b31fa"
+ARCHIVE_NAME = "R5_Public_Runtime_Test_Sources.zip"
+ARCHIVE_SHA256 = "1e58db1addf1cfa3cfb605d68ada00574c2b3f4be3664770e0ea19c2b0dde643"
 VALID_STATUSES = {"WML_CAPTURED_NEEDS_R5", "WMLC_CAPTURED_NEEDS_R5"}
 MAX_PAGES = 8
 MAX_LINKS = 64

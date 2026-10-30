@@ -3,6 +3,27 @@
 **审查日期 / Reviewed: 2026-10-29**  
 **目标 / Goal: prepare for an eventual public, usable WAP Probe source repository; keeping it private indefinitely is NOT a product requirement.**
 
+## 2026-10-31 本地预演状态（未上传 GitHub）
+
+在已保存至私人资料库的 96 提交原始 Git bundle 上进行局部历史清理预演：
+删除全历史中单独嵌入的完整 R5 网页取证 ZIP，改用保留原 R5 实现、
+合成测试样本和研究测试源码的 36 项、约 64 KB 源码归档。
+
+清理后的本地可达历史共 97 提交（原 96 提交 + 1 个预演提交），
+`git fsck --full --no-reflogs` 通过；原完整 ZIP 的对象
+`815970e84330421a6ca761fa4b0aa6b28cd4125c` 不再可达，也已从
+本地预演仓库垃圾回收后的对象数据库消失。新增的审计约束会拒绝
+仍包含该 Git 对象的历史。新的本地测试为主项目 255/255 通过；
+R5 139 项中 132 项通过、7 项因外部证据未公开而显式跳过。
+
+此项结果只属于本地预演，**不是远端 GitHub 历史已经清理**。
+原仓库仍 Private，原始研究备份未改动。远端历史强制更新会改变提交
+SHA，且旧的 GitHub Actions/PR 引用仍可能指向先前对象；必须另获
+所有者批准，并另行复核 GitHub 旧 Actions 日志/保留工件可见性。
+项目根目录 LICENSE 仍未授予；发布前须完成授权及通知。
+
+---
+
 ## 发布核准事项 / Owner release approval (2026-10-30)
 
 **Engineering: PASS. Historical privacy screening: NO CONFIRMED SECRET MATCH. Redistribution/licensing: OWNER DECISION REQUIRED.**

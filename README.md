@@ -6,7 +6,7 @@
 
 WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择页面中真实存在的链接继续浏览，并离线返回历史页面。它提供 **JSON 命令行**和**本地 MCP stdio 服务**，无需 root、浏览器自动化、Docker 或常驻网络服务器。
 
-原有冻结 R5 解析引擎、2026 年国内传统 WAP 站点调查和验证证据仍保留在同一仓库。
+本项目保留 R5 解析器、合成样本和协议兼容性测试；含真实外站页面原文的完整历史研究档案已另作私人备份，不纳入拟公开的源码。
 
 > **正式方向：保留当前 `Blueteemo/wap-probe`，完成审查后直接原地公开，不再另建公开版仓库。** 现阶段仍为 Private；历史网页响应的再分发问题、最终代码许可与可见性切换尚需单独放行。详见[公开发布审查](docs/PUBLICATION_READINESS_20261029.md)。
 
@@ -92,14 +92,14 @@ MCP 当前提供八项工具：`wap_open`、`wap_follow`、`wap_go`、`wap_read`
 ## 测试与历史研究
 
 ```bash
-python3 -m zipfile -e vendor/r5/WAP_Probe_WAP_Labs_Interop_R5_20261028.zip .r5_unpacked
+python3 -m zipfile -e vendor/r5/R5_Public_Runtime_Test_Sources.zip .r5_unpacked
 PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
   python3 -m unittest discover -s tests -v
 ```
 
-CI 会验证冻结 R5 SHA-256，并运行现有代码测试及不改动的 **139 项 R5 原测试**。CI 默认**不会访问真实第三方网站**。
+本地公开预演验证了 255 项现行源码测试、132 项 R5 测试；另有 7 项依赖私人历史网页证据的 R5 测试明确跳过。CI 将验证精简 R5 包的 SHA-256，不会访问真实第三方网站。
 
-相关资料：[Agent 使用说明](AGENT.md) · [R5 冻结来源](docs/R5_SOURCE.md) · [2026 国内 WAP 存活调查](docs/FINAL_FINDINGS_20261029.md) · [真实双页实测记录](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071)。
+相关资料：[Agent 使用说明](AGENT.md) · [R5 来源与私有归档边界](docs/R5_SOURCE.md) · [2026 国内 WAP 存活调查](docs/FINAL_FINDINGS_20261029.md) · [真实双页实测记录](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071)。
 
 ## 安全边界及项目关系
 
