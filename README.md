@@ -66,4 +66,4 @@ R5 三个子目录的独立回归及校验流程见 `.github/workflows/tests.yml
 
 项目所有者有权授权的源码采用 [MIT 许可证](LICENSE)，版权署名为 Blueteemo（千岚之夏）。第三方材料遵循各自声明，不由项目 MIT 许可覆盖。
 
-当前正式发布状态及尚待处理事项见 [发布状态](docs/PUBLICATION_STATUS.md)。
+版本说明见 [v1.0.0 发布说明](docs/RELEASE_NOTES_v1.0.0.md)。

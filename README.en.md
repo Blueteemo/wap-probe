@@ -64,4 +64,4 @@ Original external response bodies and full research archives remain in private p
 
 Owner-controlled project sources are licensed under [MIT](LICENSE), copyright Blueteemo (千岚之夏). Third-party material retains its own terms and is outside the project MIT grant.
 
-See [publication status](docs/PUBLICATION_STATUS.md) for verified remote results and the remaining blocker.
+See the [v1.0.0 release notes](docs/RELEASE_NOTES_v1.0.0.md).
