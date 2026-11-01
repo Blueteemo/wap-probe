@@ -1,255 +1,69 @@
 # WAP Probe
 
-**无需 root 的 Agent 专用 WML/WMLC 阅读工具，兼顾传统 WAP 实网取证与研究。**
+**无需 root 的本地 Agent WML/WMLC 只读阅读工具。**
 
-**简体中文** | [English](README.en.md)
+简体中文 | [English](README.en.md)
 
-WAP Probe 能让本地 AI Agent 打开公开 WML 页面、阅读正文、选择页面中真实存在的链接继续浏览，并离线返回历史页面。它提供 **JSON 命令行**和**本地 MCP stdio 服务**，无需 root、浏览器自动化、Docker 或常驻网络服务器。
+提供 JSON CLI、本地 MCP stdio 接口和独立的受控 WSP/WDP 实验工具。可读取公开 WML 页面、解析已覆盖的 WMLC/WBXML code page 0 内容、切换卡片，并逐步跟随经过验证的同源链接。
 
-本项目保留 R5 解析器、合成样本和协议兼容性测试；含真实外站页面原文的完整历史研究档案已另作私人备份，不纳入拟公开的源码。
+## 安装
 
-> **正式方向：保留当前 `Blueteemo/wap-probe`，完成审查后直接原地公开，不再另建公开版仓库。** 现阶段仍为 Private；历史网页响应的再分发问题、最终代码许可与可见性切换尚需单独放行。详见[公开发布审查](docs/PUBLICATION_READINESS_20261029.md)。
+需要 Python 3.10+、`curl` 和包含 `vendor/r5/` 的完整源码检出或 Git 源码归档。普通用户权限即可。
 
-## 功能与支持范围
-
-| 功能 | 当前状态 |
-| --- | --- |
-| 公开 HTTP/HTTPS GET、公网 DNS/IP 验证、禁用自动重定向 | 已支持 |
-| WML 文本（UTF-8、GB2312/GBK、Big5） | 已支持 |
-| WML/WMLC 表单结构预览（仅只读） | 输入框、选择项、GET/POST 动作、postfield、变量标记 |
-| GET 表单离线请求计划 | 已支持保守字段校验和脱敏预览，不执行 GET/POST |
-| 由冻结 R5 解码 WMLC/WBXML 卡片中文正文 | 已支持已覆盖的 WML code page 0 样本 |
-| WMLC 优先 HTTP 请求画像 | 可选 `wmlc`；五站仅返回文本 WML |
-| 从真实页面提取安全同源 GET 链接 | 已支持，每步仅一项请求 |
-| 多卡片 WML/WMLC 阅读、页内 `#card` 索引及离线切换 | 已支持；当前卡片独立显示 |
-| 传统 `<do><go>` 无输入导航 | 已支持，独立 `do_links`，每次显式允许联网 |
-| 离线阅读/返回、最多 8 份网页、64 条历史动作 | 已支持 |
-| JSON CLI、本地 MCP stdio Agent 工具 | 已支持 |
-| WMLScript、表单 POST、Cookies/登录、HTML 页面渲染 | 暂不支持 |
-| 受控原生 WSP/WDP 实验网关 GET | 已通过一次公开实网验证；独立、显式授权 |
-| 通用运营商网关、WTP/WTLS、诺基亚实体机兼容 | 未实现／未验证 |
-
-对于二进制 WMLC，当前只能读取 R5 已覆盖的标签、卡片和文本，包含变量或复杂标签的页面可能无法完整还原。**可读正文不等于浏览器视觉渲染、完整标准符合性，更不等于老手机实机验收通过。**
-
-## 环境与安装
-
-- Python 3.10+、PATH 中有 `curl`
-- 需要联网时具备公开 DNS/互联网访问能力
-- 普通用户权限即可，**不要求 sudo/root**
-- 需要包含 `vendor/r5/` 的**完整源码检出**；单独安装不含该归档的 wheel 无法运行 R5 解析器
-
-在仓库根目录执行：
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -e .
-wap-agent --help
-wap-mcp --help
-```
-
-也可以不安装，直接使用 `PYTHONPATH=src python3 -m wap_probe.agent_browser` 和 `PYTHONPATH=src python3 -m wap_probe.agent_mcp`。
-
-## Agent JSON 命令行
-
-```bash
-wap-agent open 'http://wap.shufaji.com/' --out ./evidence/session-01 --execute
-wap-agent read --session ./evidence/session-01
-# 仅当 cards[] 中存在 index=1 时，离线切换到第二张卡片
-wap-agent card --session ./evidence/session-01 --index 1
-wap-agent follow --session ./evidence/session-01 --link 0 --execute
-wap-agent back --session ./evidence/session-01
-```
-
-`follow --link` 的编号必须来自**当前卡片**的 `links` 数组；上面的 `0` 只是示例。`card --index` 必须来自 `cards[].index`，无须 `--execute`，也不会重新请求网络。首页有多张卡片时，先查看 `card_links[].target_index`，再使用 `card` 进行页内切换；`back` 可以还原此前的卡片或网页。
-
-每次 `open` 或 `follow` 都要明确使用 `--execute`，最多发出一次公开 GET。程序不会自动重定向、跨域跳转、登录、携带 Cookie、提交表单或运行 JavaScript/WMLScript。
-
-JSON 结果包含 `ok`、`url`、`http_status`、`mime`、`format`、`text`、`text_available`、`active_card_index`、`cards`、`card_links`、`links`、`do_links`、`form_preview`、`form_submission_supported`、`sha256`、`cursor`、`page_count` 等字段。非 WML 响应会按失败或非 WML 状态呈现。原始会话可能保存 **Set-Cookie 响应头**，不要公开、提交或分享整个取证目录。
-
-## MCP 接入（本地标准输入输出）
-
-以下是**明确开启公开 HTTP 阅读权限**的 MCP 子进程配置示例（按实际客户端结构调整）；该示例不是默认离线模式：
-
-```json
-{
-  "mcpServers": {
-    "wap-probe": {
-      "command": "python3",
-      "args": ["-m", "wap_probe.agent_mcp", "--allow-network"],
-      "env": {"PYTHONPATH": "/ABSOLUTE/PATH/TO/wap-probe/src"}
-    }
-  }
-}
-```
-
-启动参数 `--allow-network` 只代表允许联网操作；每次实际调用 `wap_open` 或 `wap_follow` 时仍必须携带 `execute: true`。去掉 `--allow-network` 即回到默认离线模式；要让离线模式可实际读取 WSP 记录，请由本机操作者额外指定 `--wsp-evidence /PATH/TO/RECORD`，再调用 `wap_import_wsp`。
-
-MCP 当前提供八项工具：`wap_open`、`wap_follow`、`wap_go`、`wap_read`、`wap_back`、`wap_card`、`wap_form_plan`、`wap_import_wsp`。其中 `wap_card(session_id, index)` 仅在本地切换已有卡片；不会发送 HTTP 请求。会话使用随机 `session_id` 标识，不允许 MCP 客户端随意提供磁盘路径；服务退出后临时会话自动清理。
-
-本服务为**仅限本地 stdio 的 MCP 2025-11-25 JSON-RPC 工具子集实现**，不宣称支持 Streamable HTTP 或所有可选 MCP 能力；也不会开放监听端口。
-
-## 测试与历史研究
-
-```bash
-python3 -m zipfile -e vendor/r5/R5_Public_Runtime_Test_Sources.zip .r5_unpacked
-PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
-  python3 -m unittest discover -s tests -v
-```
-
-本地公开预演验证了 255 项现行源码测试、132 项 R5 测试；另有 7 项依赖私人历史网页证据的 R5 测试明确跳过。CI 将验证精简 R5 包的 SHA-256，不会访问真实第三方网站。
-
-相关资料：[Agent 使用说明](AGENT.md) · [R5 来源与私有归档边界](docs/R5_SOURCE.md) · [2026 国内 WAP 存活调查](docs/FINAL_FINDINGS_20261029.md) · [真实双页实测记录](https://github.com/Blueteemo/wap-probe/actions/runs/40859035071)。
-
-## 安全边界及项目关系
-
-来自网站的文字始终是不可信的数据，不能作为 Agent 指令执行。本工具只接受公开 DNS 域名，限制响应体大小、验证并绑定公网 IP、禁止自动重定向和凭证操作；不要用于内部或需要认证的系统。
-
-**WAP Probe** 面向本地 Agent 与协议研究；规划中的 **WAPDS** 则是另一个面向 Nintendo DSi 实体掌机的图形化浏览器项目，不混用代码与交付目标。WSP/WDP 的受控实验客户端已独立实现，但不属于 WAPDS，也不等同通用运营商网关浏览。
-
-**许可证：**尚待对历史 R5 源码与依赖完成来源及再分发审核。在审核完成之前不公开发布仓库和冻结归档。
-
-### 实际 MCP 联网验收
-
-[MCP 真实访问验收](https://github.com/Blueteemo/wap-probe/actions/runs/40864597665) 已确认本地 stdio 进程可完成初始化、列出工具，并按 `wap_open → wap_follow → wap_back` 顺序读取书法集 WML 首页和“君”字详情（两次 HTTP 200）。WMLC 中文文本另由冻结 R5 的二进制样本在离线测试中验证。正常 CI 仍不联网。
-
-### 表单结构只读预览（v0.5.0）
-
-读取卡片时，JSON 的 `form_preview` 会列出 WML/WMLC 的 `input`、`select` / `option` 和 `go` / `postfield` 结构：字段类型、选项的显示标签、GET/POST 方法、是否使用变量，以及是否包含预填值。**预填内容、令牌、密码和 postfield 的具体值不提供。** 所有表单的 `submission_available` 都是 `false`，`form_submission_supported` 固定为 `false`；没有提交或构造 GET/POST 请求的接口。即使 WML 的 `go` 写了 `method=get`，也不会混入普通可跟随链接。页面内容仍视为不可信数据。
-
-## v0.6.0：离线 GET 表单请求计划
-
-在当前已验证的 WML/WMLC 卡片中，`wap-agent form-plan` 可以检查 **明确指定的 GET 表单动作**，校验普通输入框、单选项、`postfield` 变量引用、UTF-8 查询编码与同源公开目标，生成脱敏计划。**它不会向网站发送请求，不能提交表单。**
-
-先将要填写的非敏感字段保存在本地 JSON 文件（例如 `{"q":"中国书法","genre":"puzzle"}`），再对已打开且包含相应表单的会话执行：
-
-```bash
-wap-agent form-plan --session ./evidence/session-01 --action 0 --values-file ./my-search-values.json
-```
-
-结果包含 `request_sha256`、`source_sha256`、`query_keys`、`target_origin`、`path`、`risk` 和 `review_required`，**不会回显提交值，也不保留填写内容**。普通 SHA-256 指纹可能被猜测攻击，不能视作匿名化或授权令牌。`--action` 必须来自当前卡片的 `form_preview.actions`。
-
-MCP 同步提供离线工具 `wap_form_plan(session_id, action, values)`，不需要启用联网权限，但仍不提供表单执行工具。严格拒绝 POST、动态目标 URL、非同源、明显修改状态的路径、敏感字段或路径、复杂变量表达式、未声明或不匹配的选项以及超出限制的请求。现阶段仅支持简单文字输入、单选及 `$(name)` 形式的 GET `postfield`。**GET 可能导致服务端状态变化，计划通过不代表可以安全执行。**
-
-规范与具体约束参见 [GET 表单计划与安全策略](docs/FORM_GET_PLAN.md)。
-
-### v0.6.1｜表单兼容性与安全加固
-
-本轮增加 12 组离线兼容性测试。对重复控件名、`onevent` / `setvar` 等状态操作、选择项 `onpick`、重复选项值、`format` 掩码以及不确定的字符集处理，均采取**无法准确模拟则拒绝生成请求计划**的策略。GB2312 页面只有显式声明 `accept-charset="utf-8"` 时才可进入当前保守的 UTF-8 规划路径。**不开放 GET 表单实际提交**：方法为 GET 并不能保证服务端无副作用。
-
-完整兼容性矩阵及是否开放执行接口的决定见 [WML 表单兼容性报告](docs/FORM_COMPATIBILITY.md)。原有 CLI、MCP 阅读与卡片导航保持不变。
-
-### v0.7.0｜五个历史 WAP 站点实测与传统 `do/go` 导航
-
-本轮五个公开历史 WML 站点的首页与第二页均经实际 Agent 路径验证（HTTP 200）。其中 Blue G 首页采用 GB2312 和传统 `<do><go>` 操作，原有浏览器可以解码但不能访问目标二级页。现在针对**无输入、无脚本、无提交字段**的页面导航提供独立的 `do_links[]` 列表。
-
-与普通链接不同，必须从当前卡片的 `do_links[].index` 选取编号，并显式执行：
-
-```bash
-# 仅当当前 WML 页面确实提供 do_links[].index=0
-wap-agent go --session ./evidence/session-01 --index 0 --execute
-```
-
-MCP 对应 `wap_go(session_id, index, execute: true)`，服务器仍须开启 `--allow-network`。**这不是表单 GET 提交**：POST、`postfield`、动态 URL、WMLScript、明显修改状态的路径及二进制下载不进入可浏览候选。GET 仍可能存在服务端副作用，调用前需确认目标是公开只读页面。
-
-[五站真实兼容性记录](docs/REAL_WORLD_COMPAT_20261029.md)说明网页文本、导航类型和验证边界。五站的 HTTP/WML 实网成功**不代表 WMLC 实网、实体旧手机或 WSP/WDP 已完成验收**。
-
-### v0.7.1｜WMLC 优先协商与二进制 HTTP 回归
-
-新增可选请求画像 `wmlc`，与原来的 `wap1` 使用相同 Nokia 7110 UA，但 `Accept` 优先声明 `application/vnd.wap.wmlc`。旧版 `wap1`、`s60` 和历史调查矩阵保持不变。命令行示例：
-
-```bash
-wap-agent open 'http://wap.shufaji.com/' --profile wmlc --out ./evidence/wmlc-sample --execute
-```
-
-MCP 的 `wap_open` 同样支持 `profile: "wmlc"`（仍须 `execute: true` 及服务端 `--allow-network`）。**声明希望接收 WMLC，并不代表服务器真的会返回 WMLC。**
-
-五个历史站点的 WMLC 优先实测全部得到文本 WML（其中书法集第一次请求失败，单次复核成功）；本轮 **0/5 获得第三方 HTTP WMLC 响应**。另通过仅限测试环境的本机 HTTP 服务器，验证正确 MIME 的二进制 WMLC 能被 R5 解析为两张包含中文文本的卡片；这属于**受控 HTTP 联调**，不是第三方实网 WMLC 证据。
-
-[完整协商与测试报告](docs/WMLC_HTTP_COMPAT_20261029.md)。不支持 HTML、WMLScript 或泛化的 WBXML MIME 自动识别；未添加 root、代理绕行或自动提交。
-
-
-### v0.7.2｜WBXML/WML 1.3 独立参考对照
-
-引入 WAP Labs / Lowband（MIT 许可、来源提交固定）的 23 个 WBXML 参考样本作为离线回归：12 个有效样本的**卡片结构、正文及非默认属性一致**，11 个错误样本均被冻结 R5 拒绝。Rust 参考输出会补齐部分 WML DTD 默认属性，而 R5 不会，因此**不宣称 XML 字符串完全相同或符合完整 WML 规范**。这次是在我们自己的 CI 中对照另一项目预先规定的预期结果，**没有在 CI 中同时运行 Rust 解码器**，也没有找到第三方实网 WMLC 站点。
-
-样本与许可声明、测试方法见 [独立 WBXML 对照报告](docs/WBXML_INDEPENDENT_REFERENCE_20261029.md)。冻结 R5 原件保持不变。
-
-### v0.8.0｜原生 WSP/WDP 只读实验客户端
-
-**首次实网成功：** 通过 WAP Labs 的公开互操作网关发送一次连接less WSP/UDP GET，收到 **WSP 200、235 字节 `application/vnd.wap.wmlc`**，冻结 R5 成功读取 1 张卡片。这是专门提供的公开实验服务，**不是历史 WAP 原站，也不是通用运营商网关**。
-
-新增独立命令 `wap-wsp-lab`，与现有 HTTP Agent 和 MCP 七项工具完全隔离，只有明确启用双重许可后才会发送**一次**不带凭证的 UDP 请求：
-
-```bash
-# 只访问程序固定的 WAP Labs 公共互操作首页
-wap-wsp-lab --lab --allow-network --execute
-```
-
-纯 Python 标准库，无需 root、Docker 或 WSP 代理。不允许任意网关、登录、POST、重试或脚本。**UDP 9200 未加密，没有 WTLS，不能传递隐私数据。** 另加入 MIT 许可的 Lowband 独立 WSP 字节测试和本机 UDP/WMLC 中文往返验证。详情：[WSP/WDP 实验链路报告](docs/WSP_READONLY_LAB_20261029.md)。
-
-
-### v0.8.1｜WSP 响应头和字符集
-
-已实现 WSP Content-Type 的通用长度格式与字符集解析，覆盖 UTF-8、US-ASCII、ISO-8859-1。未知附加响应头只统计字节数，不解释内容。新增本机 UDP / Latin-1 页面端到端回归，冻结 R5 不变。此版本没有再次访问公开实验网关，HTTP Agent 与 MCP 保持原样。
-
-详见 [兼容性报告](docs/WSP_HEADERS_CHARSET_20261029.md)。
-
-
-### v0.8.2｜WSP 原始报文保存与离线 Agent 会话
-
-受控 `wap-wsp-lab` 现在可以在用户明确指定时保存一次 GET/Reply 的原始 WSP 二进制报文和 SHA-256 清单，**不伪装成 HTTP/curl 证据**。随后 Agent 可离线导入、阅读 WML/WMLC 卡片、切换卡片并返回：
-
-```bash
-# 首步仅访问程序内固定的公开匿名互操作资源；通常只需执行一次
-wap-wsp-lab --lab --allow-network --execute --evidence-out ./evidence/wsp-original
-
-# 以下全部离线，不需要 --execute
-wap-agent import-wsp --evidence ./evidence/wsp-original --out ./evidence/wsp-session
-wap-agent read --session ./evidence/wsp-session
-# 只有在 cards[] 提供 index=1 时才执行
-wap-agent card --session ./evidence/wsp-session --index 1
-wap-agent back --session ./evidence/wsp-session
-```
-
-离线 WSP 会话**不能继续联网跟随普通链接、do/go 或表单**。每次读取都会核查报文、哈希、正文和冻结 R5 导出的一致性，拒绝被修改的记录。返回 `source_authenticated: false`：哈希可检查文件完整性，**不能证明 UDP 网关身份或提供第三方签名**。本轮仅通过离线和本机 UDP 验证，未重复访问公开网关。
-
-[原始取证格式、限制与使用说明](docs/WSP_OFFLINE_EVIDENCE_20261029.md)。
-
-
-### v0.8.3｜MCP 读取已验证的本地 WSP 会话
-
-MCP 现新增 **`wap_import_wsp`**，仅用于将**服务启动时由操作者指定**的原始 WSP 证据导入临时的只读 Agent 会话。工具本身没有路径、URL 或 UDP 网关参数，更不会联网。
-
-```bash
-# 前提：已有 v0.8.2 生成并保存的原始 WSP 证据
-wap-mcp --wsp-evidence ./evidence/wsp-original
-```
-
-Agent 调用 `wap_import_wsp`（参数为空）得到 `session_id`，随后使用原来的 `wap_read`、`wap_card` 和 `wap_back` 离线阅读。**即使 MCP 服务启用 `--allow-network`，WSP 离线会话也不能执行 `wap_follow`、`wap_go` 或表单规划。**重复导入返回同一个已核验会话，不会无限复制文件。
-
-[本轮 MCP 接入与安全说明](docs/MCP_WSP_IMPORT_20261029.md) · [整体开发进度与后续路线](docs/PROJECT_ROADMAP_20261029.md)
-
-> 在 v0.8.3 阶段，该免 root、只读 Agent MVP 的工程进度估算为 **80%–85%**；当前 v0.9.0 的交付估算约为 **90%**。这些都是阶段性判断，不适用于完整 WAP 1.x 图形浏览器。
-
-
-### v0.9.0｜私有交付候选版：干净安装与接口验收
-
-这一版聚焦交付质量，不增加协议范围。**Python 3.10、3.12 均已在全新虚拟环境中实际执行 `pip install -e .`，并通过三个安装命令入口、HTTP/WML 离线样本、WSP/WMLC 证据导入与 MCP stdio 端到端测试。** 正式 CI 继续运行全部原有测试和冻结 R5 原始测试，不会自动访问第三方 WAP 网站。
-
-CLI/MCP 已统一错误响应，拒绝在错误文本中回显本机路径、输入值等潜在敏感内容。MCP 目前为 **8 项工具**，其中 `wap_import_wsp` 仍只读取操作者启动时指定的本地记录，不具备 UDP 请求能力。
-
-**当前建议从包含冻结 R5 文件的私有源码完整检出安装；仅靠单独 wheel 无法保证解析器可用。** 如需在新系统上复现，参阅 [v0.9.0 从零安装、验收与限制](docs/RELEASE_CANDIDATE_V090.md) 与 [整体路线图](docs/PROJECT_ROADMAP_20261029.md)。
-
-```bash
+```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
 python scripts/smoke_clean_install.py
 ```
 
-这套仅离线自检，不代替此前独立的历史 WAP 站点或 WAP Labs 公网实验网关实测。v0.9.0 属于**私有候选版本**，不是已获许可的公开发布版本。
+不要仅分发缺少 R5 源码归档的 wheel。安装冒烟使用合成数据，不访问外部网站。
 
-### 公开发布准备与 macOS 验收（更新于 2026-10-30）
+## 使用
 
-已通过 GitHub 托管的 **macOS 15 / Python 3.12** 全新虚拟环境安装及离线 CLI/MCP 验收，Ubuntu Python 3.10/3.12 同样通过。本项目**不需要长期私有**，但当前历史 R5 ZIP 内未发现独立许可证文件、仓库根目录也无 LICENSE。持续的全历史扫描已覆盖 Git 旧版本与冻结 ZIP，并重点复核过历史研究工作流日志，未发现预设常见凭据特征命中。不过 R5 内层另有 35 项外站取证或报告候选（去重后 23 种内容），其公开分发权限尚未确定。精简私有候选现可独立安装并通过 **79 项便携回归测试**，但这也不等于版权放行。因此**尚未更改仓库可见性**。见[公开发布审查与建议路径](docs/PUBLICATION_READINESS_20261029.md)。
+```sh
+wap-agent --help
+wap-mcp --help
+wap-wsp-lab --help
+```
+
+以下 `wap.example.org` 是占位域名，请换成你有权访问的公开匿名 WML 页面：
+
+```sh
+wap-agent open 'http://wap.example.org/' --out evidence/session-01 --execute
+wap-agent read --session evidence/session-01
+# 只使用上一步实际返回的 links[].index：
+wap-agent follow --session evidence/session-01 --link 0 --execute
+wap-agent back --session evidence/session-01
+```
+
+离线卡片切换使用 `card --session ... --index ...`。无输入 `<do><go>` 导航使用独立 `go` 命令。表单结构预览和 GET 请求计划均不提交表单。
+
+MCP 客户端以 stdio 子进程启动 `wap-mcp`；允许显式联网工具时添加 `--allow-network`。共 8 项工具，参数及边界见 [AGENT.md](AGENT.md)。
+
+## 功能边界
+
+- 每一步最多一个显式公共 HTTP(S) GET；校验公网 DNS/IP、绑定解析结果、校验 TLS，不自动跟随重定向，不发送凭据或 Cookie。
+- WML/WMLC 是语义文本阅读视图，支持已覆盖的卡片、正文、链接及只读表单预览；不是图形浏览器或完整 WML/WBXML 标准实现。
+- 不支持 HTML 渲染、WMLScript、变量求值、表单提交、登录态、自动爬取。
+- WSP/WDP 是单独显式启用、限定端点的无连接实验；不提供通用运营商网关、WTP 或 WTLS，不代表诺基亚等实体手机兼容。
+- 历史实网结论只代表当时采样，不能保证今天的站点或网关仍可访问。
+- 采集目录可能包含原始响应及 Set-Cookie，请保留在本地，勿提交到 Git。
+
+## 测试与来源
+
+运行当前项目测试前，可将已固定校验值的 R5 源码包解压到 `.r5_unpacked`：
+
+```sh
+python3 -m zipfile -e vendor/r5/R5_Public_Runtime_Test_Sources.zip .r5_unpacked
+PYTHONPATH=src R5_PROBE_DIR=.r5_unpacked/wap-probe-live-discovery-r5/probe \
+ python3 -m unittest discover -s tests -v
+```
+
+R5 三个子目录的独立回归及校验流程见 `.github/workflows/tests.yml`。7 项依赖私人历史外站证据的用例明确跳过，不能记为通过。
+
+完整历史外站正文及研究原件保存在私人备份，不随此源码包分发。[R5 来源与边界](docs/R5_SOURCE.md) · [第三方来源和许可证](THIRD_PARTY_NOTICES.md) · [研究结论](docs/FINAL_FINDINGS_20261029.md)。
+
+项目自有源码的 MIT 许可仍待所有者最终授权；第三方材料遵循各自声明，不由项目许可覆盖。
+
+当前正式发布状态及尚待处理事项见 [发布状态](docs/PUBLICATION_STATUS.md)。
