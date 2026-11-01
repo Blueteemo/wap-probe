@@ -1,6 +1,6 @@
 # Third-party sources and scope
 
-The proposed project MIT license applies only to material the owner has authority to license. It does not grant rights to external websites, standards or third-party code. No new project license has been granted by this preparation patch.
+The project MIT license applies only to material the owner has authority to license. It does not grant rights to external websites, standards or third-party code. The root LICENSE must be read together with these scope exclusions and retained upstream notices.
 
 ## Lowband / WAP Labs fixtures
 
@@ -19,7 +19,7 @@ The R5 WBXML parser identifies WML specifications and Android kXML `Wml.java` as
 
 ## Private historical material
 
-The original full R5 ZIP and captured third-party WML/HTML/XHTML responses are excluded from the sanitized source distribution. Public accessibility of a website is not a redistribution grant. The project's proposed MIT grant does not cover these privately preserved bodies.
+The original full R5 ZIP and captured third-party WML/HTML/XHTML responses are excluded from the sanitized source distribution. Public accessibility of a website is not a redistribution grant. The project's MIT grant does not cover these privately preserved bodies.
 
 ## Historical compatibility comparisons
 

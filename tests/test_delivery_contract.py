@@ -15,7 +15,7 @@ from wap_probe.errors import safe_error
 from wap_probe.wsp_readonly import main as lab_main
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE = "0.9.0"
+RELEASE = "1.0.0"
 
 
 class DeliveryContractTests(unittest.TestCase):

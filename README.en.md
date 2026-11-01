@@ -62,6 +62,6 @@ The workflow also runs the R5 probe/discovery/integrations suites. Seven cases r
 
 Original external response bodies and full research archives remain in private preservation. [R5 provenance](docs/R5_SOURCE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Research findings](docs/FINAL_FINDINGS_20261029.md).
 
-The proposed MIT grant for owner-controlled project sources awaits final owner approval. Third-party material retains its own terms.
+Owner-controlled project sources are licensed under [MIT](LICENSE), copyright Blueteemo (千岚之夏). Third-party material retains its own terms and is outside the project MIT grant.
 
 See [publication status](docs/PUBLICATION_STATUS.md) for verified remote results and the remaining blocker.

@@ -81,7 +81,7 @@ def http_fixture(folder: Path):
 
 def main():
     assert sys.version_info >= (3, 10)
-    assert wap_probe.__version__ == "0.9.0"
+    assert wap_probe.__version__ == "1.0.0"
     assert Path(wap_probe.__file__).resolve().is_relative_to(REPO)
     assert not os.environ.get("PYTHONPATH"), "run with no PYTHONPATH override"
     archive = REPO / "vendor" / "r5" / ARCHIVE_NAME
@@ -130,7 +130,7 @@ def main():
                       input="".join(json.dumps(req) + "\n" for req in requests))
         responses = [json.loads(line) for line in output.splitlines()]
         assert [entry["id"] for entry in responses] == [1, 2, 3]
-        assert responses[0]["result"]["serverInfo"]["version"] == "0.9.0"
+        assert responses[0]["result"]["serverInfo"]["version"] == "1.0.0"
         names = {t["name"] for t in responses[1]["result"]["tools"]}
         assert len(names) == 8 and "wap_import_wsp" in names
         mcp_view = responses[2]["result"]["structuredContent"]

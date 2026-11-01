@@ -1,6 +1,6 @@
 # Publication status — 2026-11-01
 
-The existing `Blueteemo/wap-probe` repository remains private, version 0.9.0. No project MIT license, public visibility change, v1.0 tag or release has been issued.
+The existing `Blueteemo/wap-probe` repository remains private. Sources are prepared as version 1.0.0 with the owner-authorized MIT license for owner-controlled material, preserving third-party exclusions. No public visibility change, v1.0 tag or release has been issued.
 
 ## Completed verification
 
@@ -14,6 +14,8 @@ After the rewrite, an authenticated GitHub contents lookup using the old main SH
 
 Do not treat branch-history cleanup as server-side object erasure. Resolve or explicitly assess this residual access before changing visibility. GitHub's [history-removal guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) describes cached views and pull-request reference limitations; support removal is not guaranteed for non-sensitive material.
 
-## Prepared owner decisions
+## Release preparation
 
-Chinese/English README, Agent guidance, source boundaries and third-party notices are prepared. A proposed MIT license and v1.0 release text remain private review drafts. Any project license must cover only sources the owner can license, preserving upstream notices. Final release also requires a coordinated version update, passing CI, and explicit owner authorization for the license grant, public visibility and release publication.
+Chinese/English README, Agent guidance, source boundaries and third-party notices are complete. Version identifiers and the delivery contract are synchronized to 1.0.0. The root MIT license applies only to sources the owner can license, preserving upstream notices. Public visibility and release publication remain blocked by residual old-object access.
+
+The five temporary Actions full-backup artifacts have been deleted and their run artifact lists verified empty. Private preservation copies remain intact. Support request #4935819 was submitted on 2026-11-01; GitHub closed it because this account currently has self-service support only. No server-side removal was performed. Do not misclassify the third-party website bodies as leaked credentials to obtain a different support route. Do not delete/recreate this repository to work around the blocker.
