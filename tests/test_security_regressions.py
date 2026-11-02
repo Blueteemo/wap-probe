@@ -11,8 +11,10 @@ BODY = b"<wml><card id='a'/></wml>"
 SHA = "a" * 64
 
 
-def fixture(body=BODY, status=200, prefix=b"", extra=()):
-    fields = [f"Content-Type: text/vnd.wap.wml", f"Content-Length: {len(body)}"]
+def fixture(body=BODY, status=200, prefix=b"", extra=(), include_content_length=True):
+    fields = ["Content-Type: text/vnd.wap.wml"]
+    if include_content_length:
+        fields.append(f"Content-Length: {len(body)}")
     fields.extend(extra)
     header = prefix + (
         "HTTP/1.1 " + str(status) + " OK\r\n"
@@ -82,10 +84,21 @@ class SecurityRegressions(unittest.TestCase):
         self.check("WML_CAPTURED_NEEDS_R5",
                    prefix=b"HTTP/1.1 103 Early Hints\r\nLink: </x>; rel=preload\r\n\r\n")
 
+    def test_single_transfer_encoding_without_content_length(self):
+        self.check("WML_CAPTURED_NEEDS_R5", include_content_length=False,
+                   extra=("Transfer-Encoding: chunked",))
+
     def test_duplicate_transfer_encoding(self):
-        self.check("INVALID_EVIDENCE", extra=(
-            "Transfer-Encoding: chunked", "Transfer-Encoding: chunked"
-        ))
+        meta, headers, body = fixture(
+            include_content_length=False,
+            extra=("Transfer-Encoding: chunked", "Transfer-Encoding: chunked"),
+        )
+        # Isolate the duplicate-header rule from conflicting HTTP framing.
+        self.assertNotIn(b"Content-Length:", headers)
+        self.assertEqual(verify(meta, headers, body)["status"], "INVALID_EVIDENCE")
+
+    def test_transfer_encoding_content_length_conflict(self):
+        self.check("INVALID_EVIDENCE", extra=("Transfer-Encoding: chunked",))
 
     def test_script_scheme_rejected(self):
         self.assertIsNone(evaluate_link(HOME, {"href": "javascript:alert(1)"})[0])
