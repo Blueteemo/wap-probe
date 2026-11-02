@@ -1,6 +1,8 @@
 # WMLC HTTP compatibility & negotiation — 2026-10-29
 
-**Version 0.7.1 · Private research note · No third-party live WMLC response confirmed.**
+> **历史记录提示（2026-11-02）：** 下文的 GitHub Actions 运行编号来自已删除的旧仓库（Repository ID `1436882222`），不再对应可打开的新仓库运行页面。原始研究资料保留于私人备份；这些编号只作为历史索引，公开文档中的哈希、方法和结论保持不变。
+
+**Version 0.7.1 · Historical research note · No third-party live WMLC response confirmed.**
 
 ## What was tested
 
@@ -18,7 +20,7 @@ Used the actual opt-in rootless Agent `open_page(..., profile='wmlc')` through f
 | `http://wap.uc123.com/` | HTTP 200, `text/vnd.wap.wml` | Text WML, verified R5 |
 | `http://wap.yuyangzhou.name/` | HTTP 200, `text/vnd.wap.wml` | Text WML, verified R5; GB2312 content |
 
-First-pass run [#40882223817](https://github.com/Blueteemo/wap-probe/actions/runs/40882223817), single-host retry [#40882388958](https://github.com/Blueteemo/wap-probe/actions/runs/40882388958). The result is **5/5 sites with valid text WML in the sampled requests; 0/5 confirmed direct-origin WMLC MIME responses**. Do not extrapolate to all public WAP servers or allege they *never* serve WMLC under any device profile.
+First-pass run 旧库 Actions 运行 `40882223817`, single-host retry 旧库 Actions 运行 `40882388958`. The result is **5/5 sites with valid text WML in the sampled requests; 0/5 confirmed direct-origin WMLC MIME responses**. Do not extrapolate to all public WAP servers or allege they *never* serve WMLC under any device profile.
 
 ### Controlled binary HTTP transport (not a third-party site)
 

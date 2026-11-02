@@ -1,6 +1,8 @@
 # Real-world WML Agent compatibility — 2026-10-29
 
-**Private, opt-in real-network verification.** This is a five-origin browser compatibility sample, not a new nationwide WAP survival census or evidence of physical-phone/WSP/WDP support. Historical R8 research is separately frozen in [FINAL_FINDINGS_20261029.md](FINAL_FINDINGS_20261029.md).
+> **历史记录提示（2026-11-02）：** 下文的 GitHub Actions 运行编号来自已删除的旧仓库（Repository ID `1436882222`），不再对应可打开的新仓库运行页面。原始研究资料保留于私人备份；这些编号只作为历史索引，公开文档中的哈希、方法和结论保持不变。
+
+**Historical opt-in real-network verification (2026-10-29).** This is a five-origin browser compatibility sample, not a new nationwide WAP survival census or evidence of physical-phone/WSP/WDP support. Historical R8 research is separately frozen in [FINAL_FINDINGS_20261029.md](FINAL_FINDINGS_20261029.md).
 
 ## Methods
 
@@ -19,7 +21,7 @@
 | `http://wap.uc123.com/` | 1 card, 40 links, 500 chars; SHA `93261ba17104a3f46faa9cc1a1a4b891add97301ca930cd77d789ac5e1271f99` | `/s_3457/`: 1 card, 0 links, 18 chars; SHA `519ce2e7a7532c42e7653d146c438411091dccaeafd6e029a069b049475cb530` | Same-origin WML **intermediary**, no claim outside redirect works |
 | `http://wap.yuyangzhou.name/` | 1 card, **5 explicit do/go candidates**, 11 chars; SHA `97deed8c5332a314e8cb163ce61ff5a6576358427c015f6180f4e8a8bd227a6a` | `/m_service/default.wml`: 1 card, 42 chars; SHA `93342fd63493503b096a470671a7e8bd6f4fc7ddee3961136083c5022335c11d` | GB2312, `<do><go>` navigation; WMLScript not executed |
 
-Original sanitized runs: [five-home baseline #40878683922](https://github.com/Blueteemo/wap-probe/actions/runs/40878683922), [Blue G structural diagnosis #40878887222](https://github.com/Blueteemo/wap-probe/actions/runs/40878887222), [explicit Blue G double-page acceptance #40879767921](https://github.com/Blueteemo/wap-probe/actions/runs/40879767921).
+Original sanitized runs: 旧库 Actions 运行 `40878683922`, 旧库 Actions 运行 `40878887222`, 旧库 Actions 运行 `40879767921`.
 
 ## Diagnosed compatibility issue and fix
 

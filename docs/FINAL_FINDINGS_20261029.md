@@ -1,5 +1,7 @@
 # 国内传统 WAP/WML 存活站点调查 — 最终清单
 
+> **历史记录提示（2026-11-02）：** 下文的 GitHub Actions 运行编号来自已删除的旧仓库（Repository ID `1436882222`），不再对应可打开的新仓库运行页面。原始研究资料保留于私人备份；这些编号只作为历史索引，公开文档中的哈希、方法和结论保持不变。
+
 **快照日期：2026-10-29（UTC+8）；调查状态：R8 已完成。**
 
 > **结论先行：**在本次优先检查的 8 个国内历史 WAP 入口中，发现 **5 个域名**当前仍能公开提供「HTTP 200 + WML 首页 + 从首页实际链接进入的同源 WML 第二页」。另有 **2 个**只能证明 WML 首页还在，**1 个**原历史路径已转向其他服务。这不是中国所有 WAP 站点的穷尽统计，也不等于老手机实机可用。
@@ -26,7 +28,7 @@
 - **采集：**固定 Nokia 7110 与 S60v3 请求头；公开 GET、DNS 公网 IP 固定、无代理、无自动重定向、无登录、无表单提交；响应头 / 正文 / 时间 / IP / SHA-256 留存在限期私有 GitHub Actions 工件中。
 - **第一解析器：**仓库冻结 R5，解析从实际原站获得的字节，验证同源页面的真实导航链接。
 - **独立解析器：**[WAP Labs / WaveNav](https://github.com/dills122/wap-labs)，固定源码提交 `9cd7ab97dc6752fc1616feb3505a58603f6a45df`；以独立 Rust WML 引擎加载并生成渲染帧。R7 六份、R8 七份和蓝G 三份（经严格 GB2312→Unicode 文本解码）的校验与加载结果分别为 **6/6、7/7、3/3**。合计 16 个验证输入；其中存在同一 URL 的不同时间/UA 采集，**不是 16 个互不相同的网页**。
-- **证据主入口：**[R6 公共栏目及历史入口采集](https://github.com/Blueteemo/wap-probe/actions/runs/40846429748)、[R6/S60 复核](https://github.com/Blueteemo/wap-probe/actions/runs/40846746719)、[R7 独立复核](https://github.com/Blueteemo/wap-probe/actions/runs/40847596595)、[R8 余下候选](https://github.com/Blueteemo/wap-probe/actions/runs/40848278136)、[R8 Rust 独立复核](https://github.com/Blueteemo/wap-probe/actions/runs/40848787056)、[蓝G 两条公开 WML 导航](https://github.com/Blueteemo/wap-probe/actions/runs/40848675568)、[蓝G GB2312 独立复核](https://github.com/Blueteemo/wap-probe/actions/runs/40848992644)、[天下网匿名访客尝试](https://github.com/Blueteemo/wap-probe/actions/runs/40845259067)。
+- **证据主入口：**R6 公共栏目及历史入口采集（旧库 Actions 运行 `40846429748`）、R6/S60 复核（旧库 Actions 运行 `40846746719`）、R7 独立复核（旧库 Actions 运行 `40847596595`）、R8 余下候选（旧库 Actions 运行 `40848278136`）、R8 Rust 独立复核（旧库 Actions 运行 `40848787056`）、蓝G 两条公开 WML 导航（旧库 Actions 运行 `40848675568`）、蓝G GB2312 独立复核（旧库 Actions 运行 `40848992644`）、天下网匿名访客尝试（旧库 Actions 运行 `40845259067`）。
 - **原始工件保留期：**多为 3 天；可能含 `Set-Cookie`，不公开、也不写入 Git 历史。审计者应在工件有效期内保留受控副本；本仓库保存脱敏的原始哈希、运行 ID 和状态，供后续对照。R8 一次 Rust 脚手架因 `replace` 参数类型错误编译失败，下一提交已修复并完整重跑，不能把该编译失败解释为 WML 失败。
 
 ### R8 新增原始字节 SHA-256

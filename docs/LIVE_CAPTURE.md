@@ -1,5 +1,7 @@
 # R6 direct-origin WAP capture
 
+> **历史记录提示（2026-11-02）：** 下文的 GitHub Actions 运行编号来自已删除的旧仓库（Repository ID `1436882222`），不再对应可打开的新仓库运行页面。原始研究资料保留于私人备份；这些编号只作为历史索引，公开文档中的哈希、方法和结论保持不变。
+
 **Initial mission:** find live Chinese-origin WML/WMLC services, capture complete origin HTTP evidence and establish a reachable second GET; separately compare native WAP / WAP Labs if available. The 8 historical endpoints are only candidates.
 
 ## Explicit opt-in
@@ -10,7 +12,7 @@ PYTHONPATH=src python3 -m wap_probe.pipeline --matrix --limit 2 --execute \
   --out evidence/first-two
 ```
 
-Requires curl, a direct public network, and the frozen R5 archive unpacked to `.r5_unpacked/wap-probe-live-discovery-r5/probe`. Choose an unused `--out` directory; existing roots are never overwritten. Set `--delay` to >=1 second (default: 2). Individual HTTP/HTTPS and Nokia/S60 attempts remain separate.
+Requires curl, a direct public network, and the current sanitized R5 source archive (`vendor/r5/R5_Public_Runtime_Test_Sources.zip`) extracted under `.r5_unpacked/` (parser path: `.r5_unpacked/wap-probe-live-discovery-r5/probe`). Choose an unused `--out` directory; existing roots are never overwritten. Set `--delay` to >=1 second (default: 2). Individual HTTP/HTTPS and Nokia/S60 attempts remain separate.
 
 The collector rejects non-public DNS answers and IP literals, pins one public DNS address via `curl --resolve`, disables proxies and curl config, does not follow redirects or send cookies/auth/POST, and uses verified TLS and a 1MiB response body cap. Curl stores response headers and the transferred entity body, not raw TCP bytes. Evidence folders contain `metadata.json`, `headers.bin`, `body.bin`, `stderr.txt`, `curl_writeout.txt`, plus `r5_export.json` where parsing succeeded.
 
@@ -95,7 +97,7 @@ two requests, preserved pacing, and non-disclosure in the run report.
 
 ## Automated no-click anonymous session recheck: 2026-10-29
 
-GitHub Actions run [#40845259067](https://github.com/Blueteemo/wap-probe/actions/runs/40845259067),
+GitHub Actions run 旧库 Actions 运行 `40845259067`,
 triggered by a temporary path-scoped push workflow, completed its bounded
 two-GET experiment without requiring a manual Actions click. The temporary
 workflow was removed after this run; the frozen R5 ZIP and pipeline are unchanged.
@@ -165,8 +167,8 @@ also got 302. These outcomes do not show whether registration is necessary:
 the guest flow has not been completed. No credentials, login, POST, or
 automatic protocol downgrade were used.
 
-**Artifacts:** [run 40846429748](https://github.com/Blueteemo/wap-probe/actions/runs/40846429748)
-(artifact ID 12885087285), [run 40846746719](https://github.com/Blueteemo/wap-probe/actions/runs/40846746719)
+**Artifacts:** 旧库 Actions 运行 `40846429748`
+(artifact ID 12885087285), 旧库 Actions 运行 `40846746719`
 (artifact ID 12884693376). Private raw headers may contain Set-Cookie
 values; never publish or commit them. Both artifacts retain for 3 days.
 
@@ -182,7 +184,7 @@ document HTTP-only feasibility without stretching the investigation.
 
 This is a **true second parser/rendering implementation**, not another
 test using frozen R5. In
-[GitHub Actions run #40847596595](https://github.com/Blueteemo/wap-probe/actions/runs/40847596595),
+旧库 Actions 运行 `40847596595`,
 the runner checked out public `dills122/wap-labs` at immutable Git SHA
 `9cd7ab97dc6752fc1616feb3505a58603f6a45df`, compiled its native
 `wavenav_engine` v0.3.0 with default WASM bindings disabled, and called
@@ -252,6 +254,6 @@ Unicode after SHA-256 comparison, then 3/3 load and render success. No new
 external WAP site GET was required for those independent replays.
 
 The authoritative concise survey closure, status table, source hashes,
-run links and legacy handset limitations are now at
+historical run IDs and legacy handset limitations are now at
 [FINAL_FINDINGS_20261029.md](FINAL_FINDINGS_20261029.md). All temporary R8
 workflows are retired. Source archive and production pipeline are unchanged.

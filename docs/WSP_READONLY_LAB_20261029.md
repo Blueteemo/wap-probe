@@ -1,5 +1,7 @@
 # WSP/WDP 只读实验链路｜WSP/WDP Read-only Lab Validation
 
+> **历史记录提示（2026-11-02）：** 下文的 GitHub Actions 运行编号来自已删除的旧仓库（Repository ID `1436882222`），不再对应可打开的新仓库运行页面。原始研究资料保留于私人备份；这些编号只作为历史索引，公开文档中的哈希、方法和结论保持不变。
+
 **2026-10-29 · WAP Probe v0.8.0 · Separate experimental transport**
 
 ## 核验结论 / Verified outcome
@@ -18,13 +20,13 @@ A real connectionless WSP GET was sent over UDP to **WAP Labs' publicly advertis
 | Body SHA-256 | `cb0f2e170f875f35d55e80943c6e491e72e3b875a32c3783fcdb29257eb5448b` |
 | Frozen R5 | **1 card**, readable English first-party interoperability text |
 
-GitHub Actions one-shot actual network test: [run 40887346599](https://github.com/Blueteemo/wap-probe/actions/runs/40887346599), log marker `WSP_LAB_SINGLE_GET_EXIT=0`. This result was reached without HTTP proxying, curl, POST, credentials, cookies, scripts, follow-up navigation, or WTLS.
+GitHub Actions one-shot actual network test: 旧库 Actions 运行 `40887346599`, log marker `WSP_LAB_SINGLE_GET_EXIT=0`. This result was reached without HTTP proxying, curl, POST, credentials, cookies, scripts, follow-up navigation, or WTLS.
 
 **Important distinction / 重要区别：** This is a real **public first-party interoperability test service** intentionally offered by WAP Labs, not an original historical Chinese WAP website or general carrier gateway. It does prove a narrow WSP/WDP → WMLC → R5 card-text path can work over a real network. It does **not** prove broad WSP/WDP compatibility, authentic vintage handset/browser equivalence, or true end-to-end WTLS security.
 
 ## Architecture / 架构
 
-`src/wap_probe/wsp_readonly.py` is a separate, standard-library-only experimental client. It does not modify HTTP `collector.capture`, the `wap-agent` session format, the seven MCP tools, R5, nor any WML form rules.
+`src/wap_probe/wsp_readonly.py` is a separate, standard-library-only experimental client. It does not modify HTTP `collector.capture`, the `wap-agent` session format, the eight MCP tools, R5, nor any WML form rules.
 
 - Pure `encode_get()` and `decode_reply()` functions implement bounded WAP-203 connectionless GET and Reply, with uintvar URI length, one WMLC or WML Accept field, transaction-ID correlation, status mapping and minimal content-type handling.
 - Public UDP transport is restricted to the **single hard-coded published gateway and the single anonymous interop homepage**, not arbitrary destination URLs, ports or general UDP probing. Two explicit CLI flags are required.
@@ -34,7 +36,7 @@ GitHub Actions one-shot actual network test: [run 40887346599](https://github.co
 
 ## Usage / 使用
 
-From the checked-out private repository with `vendor/r5/`:
+From a complete source checkout of the public repository including the sanitized R5 source archive in `vendor/r5/`:
 
 ```bash
 # inspect help; does not perform any network action
@@ -62,6 +64,6 @@ The normal CI runs these locally **without accessing any public WSP gateway**. A
 
 ## What this is not / 非目标
 
-No WTP connection mode, WTLS, WCMP, WDP fragmentation/reassembly, arbitrary gateways, private IP targets, cookies, sessions, redirects, retransmission strategy, commercial carrier networks, HTML renderer, form submission, WMLScript, or general WAP website navigation. The parser remains the exact frozen R5 archive; license/provenance review for that historical archive still blocks treating the whole private repository as approved public open source.
+No WTP connection mode, WTLS, WCMP, WDP fragmentation/reassembly, arbitrary gateways, private IP targets, cookies, sessions, redirects, retransmission strategy, commercial carrier networks, HTML renderer, form submission, WMLScript, or general WAP website navigation. The current public v1.0.0 runtime uses the sanitized R5 source archive; its parser files are byte-identical to the original R5 parser. The original full historical archive and third-party website captures remain private and are excluded from this repository. See [R5 source boundaries](R5_SOURCE.md) and [third-party notices](../THIRD_PARTY_NOTICES.md).
 
 Further expansion would first need independent header/charset forms, WDP fragmentation handling, and an explicit per-origin allowlist review. Avoid making the currently bounded lab client an unrestricted WAP network client.
